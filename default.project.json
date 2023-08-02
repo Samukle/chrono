@@ -3,6 +3,8 @@
   "tree": {
     "$className": "DataModel",
 
+    "UTIL": {"$path": "src/UTIL.lua"},
+
     "ReplicatedStorage": {
       "MainModule": {
         "$path": "src/main"
