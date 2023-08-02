@@ -1,0 +1,43 @@
+{
+  "name": "chrono",
+  "tree": {
+    "$className": "DataModel",
+
+    "ReplicatedStorage": {
+      "MainModule": {
+        "$path": "src/main"
+      }
+    },
+
+    "StarterPlayer": {
+      "StarterCharacterScripts": {
+        "Client": {
+          "$path": "src/server/character"
+        }
+      }
+    },
+
+    "Workspace": {
+      "$properties": {
+        "FilteringEnabled": true
+      }
+    },
+    "Lighting": {
+      "$properties": {
+        "Ambient": [
+          0,
+          0,
+          0
+        ],
+        "Brightness": 2,
+        "GlobalShadows": true,
+        "Outlines": false
+      }
+    },
+    "SoundService": {
+      "$properties": {
+        "RespectFilteringEnabled": true
+      }
+    }
+  }
+}
