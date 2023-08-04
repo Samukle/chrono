@@ -15,9 +15,6 @@ local this = {}
 local thisMT = {}
 thisMT.__index = thisMT
 
-this.const = script:WaitForChild("CONST")
-require(this.const)
-
 do
 function thisMT:load(playerName : string)
 	local player = Player(playerName)
@@ -30,18 +27,6 @@ function thisMT:load(playerName : string)
 		Model.PrimaryPart.Anchored = false
 		player.Character = Model
 		Script.Parent = Model
-		end
-	end
-
-function thisMT:anim(command, object : Model|Part, animation)
-	if(command==ANIM_PLAY) then
-		local Keyframes = animation:GetKeyframes()
-		table.sort(Keyframes, function(a,b) return a.Time<b.Time end)
-
-		local Joints = {}
-		for _,x in object:GetDescendants() do
-			
-			end
 		end
 	end
 
