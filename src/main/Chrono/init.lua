@@ -150,6 +150,14 @@ end
 
 if(ANIM) then
      ANIM_TICK += 1
+     if(not ANIM_BUSY) then
+          if(not RUNNING) then
+               ANIM_QUERY_SAFE(ANIM_IDLE)
+          else
+               ANIM_QUERY_SAFE(ANIM_RUN)
+          end
+     end
+
      local SECOND = ANIM_TICK/60
      --print(ANIM_POSES)
      --print(ANIM_POSE_THIS)
