@@ -1,7 +1,8 @@
 -- Chrono Class's Main Module --
---------------------------
+--------------------------------
 -- by Samukle --
 
+local AnimatorManager = require(14324331578)
 local ChronoModel = require(14291945769)
 local ChronoScript = function() return script:WaitForChild("CHRONO"):Clone() end
 
@@ -21,6 +22,7 @@ function thisMT:load(playerName : string)
 	if(player) then
 		local ModelOld = player.Character
 		local Model, Script = ChronoModel(), ChronoScript()
+		local Animator = AnimatorManager.new(Model)
 		Script.Name = "Class" ; Model.Name = player.Name
 		Model:PivotTo(ModelOld~=nil and ModelOld:GetPivot() or CFrame.new(0,5,0))
 		Model.Parent = workspace

@@ -6,6 +6,12 @@
     "UTIL": {"$path": "src/UTIL.lua"},
 
     "ReplicatedStorage": {
+      "Animator": {
+        "$className": "Folder",
+        "MainModule": {
+          "$path": "src/animator"
+        }
+      },
       "MainModule": {
         "$path": "src/main"
       }
