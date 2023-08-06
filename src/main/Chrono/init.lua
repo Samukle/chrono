@@ -41,13 +41,15 @@ ANIM_GET = function(input) return ANIM_LIST:FindFirstChild(input) end
 SND_SLASH = {ID='http://www.roblox.com/asset/?id=12222216',START=0.3,END=60000}
 SND_LUNGE = {ID='http://www.roblox.com/asset/?id=12222208',START=0,END=60000}
 SND_SHEATHE = {ID='http://www.roblox.com/asset/?id=12222225',START=0,END=60000}
+SND_BLOCK = {ID='rbxassetid://4766120815',START=0,END=60000}
 SND_SPC = {ID='rbxassetid://8285477344',START=0,END=60000}
 SND_SPCSHORT = {ID='rbxassetid://8386783529',START=0,END=60000}
+SND_MAGIC = {ID='rbxassetid://438666196',START=0,END=60000}
 SND_CHARGE = {ID='rbxassetid://4995664881',START=0,END=60000}
-SND_CUT0 = {ID='rbxassetid://4766120930',START=0,END=60000}
-SND_CUT1 = {ID='rbxassetid://4766121030',START=0,END=60000}
-SND_CUT2 = {ID='rbxassetid://4766121138',START=0,END=60000}
-SND_CUT3 = {ID='rbxassetid://4547246853',START=0,END=60000}
+SND_CUT0 = {ID='rbxassetid://7171761940',START=0.2,END=60000}
+SND_CUT1 = {ID='rbxassetid://5473058688',START=0,END=60000}
+SND_CUT2 = {ID='rbxassetid://7072652156',START=0,END=60000}
+SND_CUT3 = {ID='rbxassetid://7072651886',START=0,END=60000}
 
 SND_MARKER = {ID='rbxassetid://7242037470',START=0,END=60000}
 
@@ -115,6 +117,10 @@ Model_Joints = {
      [HAND_R] = J_GET(J_WRIST_R);
      [HAND_L] = J_GET(J_WRIST_L);
 }
+
+ROTATION = Instance.new('BodyGyro',Model_Body[ROOT])
+ROTATION.D = 0
+ROTATION_TIMER = 0
 
 for name,joint in Model_Joints do
 Model_Joints_Basic [name] = joint.C0
@@ -202,7 +208,8 @@ function SET_LOOK ( subject : Model, Look : CFrame )
      local subject = typeof(subject) == 'CFrame' and Model or subject
      local _,Y,_ = COORD(subject:GetPivot().p,Look.p):ToEulerAnglesYXZ()
      local X,_,Z = subject:GetPivot():ToEulerAnglesYXZ()
-     subject:PivotTo(COORD(subject:GetPivot().p)*ANGLE(X,Y,Z))
+     ROTATION_TIMER=60
+     ROTATION.CFrame = COORD(subject:GetPivot().p)*ANGLE(X,Y,Z)
      end
 
 function SET_LOOK_AT_NEAREST ()
@@ -299,7 +306,7 @@ function HITBOX ( ID, PART, host, size, offset, time, hitOwner, color, f )
                          local that = hit.Parent
                          local thatHumanoid = GET_HUMANOID(that)
                          local thatRoot = GET_ROOT(that)
-                         if(that and thatHumanoid and thatRoot and (not HITBOXES [ID] ['$result'] [that]) and ((hitOwner) and true or not hit:IsDescendantOf(Model))) then
+                         if(that and thatHumanoid and thatRoot and (not HITBOXES [ID] ['$result'] [that]) and ((hitOwner) and true or not hit:IsDescendantOf(Model)) and (not GET_ARE_YOU_A_TEAMMATE(that))) then
                               HITBOXES [ID] ['$result'] [that] = {hit=hit,humanoid=thatHumanoid,root=thatRoot,tick=thisTICK,part=PART}
                               if(f) then f(ID,PART,hit,that,thatHumanoid,thatRoot,thisTICK) end
                          end
@@ -321,12 +328,29 @@ function HL ( OBJ, TR, oTR, COLOR, oCOLOR, time )
      SET_DEBRIS(IT, time)
 end
 
+function AFTERIMAGE ( subject : Model )
+     for _,x in subject:GetDescendants() do
+          if (x:IsA("BasePart")) then
+               local q = x:Clone()
+               q.Anchored = true
+               q.CastShadow = false
+               q.Material = Enum.Material.Neon
+               q.CanCollide = false ; q.CanQuery = false ; q.CanTouch = false
+               q.Color = COLOR(1,1,1)
+               q:ClearAllChildren()
+               q.Parent = workspace
+               Service'TweenService':Create(q,TweenInfo.new(0.5,Enum.EasingStyle.Linear,Enum.EasingDirection.In,0,false,0),{Transparency=q.Transparency+1}):Play()
+               SET_DEBRIS(q,0.5)
+               end
+          end
+end
+
 function KNOCKBACK ( knockback_data )
 local Root = GET_ROOT (knockback_data [1])
 for _,x in Root:GetChildren() do if x:IsA('BodyVelocity') then x:Destroy() end end
 local Bv = Instance.new('BodyVelocity')
 Bv.Velocity = knockback_data.Velocity
-Bv.MaxForce = knockback_data.MaxForce or V3(1e6,1e6,1e6)
+Bv.MaxForce = knockback_data.MaxForce or V3(1e13,1e13,1e13)
 Bv.Parent = Root
 SET_DEBRIS(Bv, knockback_data.Time or 0.1, true)
 end
@@ -334,16 +358,38 @@ end
 function DAMAGE ( damage_data )
      local that = damage_data.that
      HL(that.Model,0,1,COLOR(1,1,1),COLOR(1,1,1),0.5)
-     SET_SOUND(SND_MARKER,that.Root,1,0.5)
+     SET_SOUND(SND_MARKER,that.Root,1,1)
      local assetX = ASSET("HITSTOP_SHAKE")
      assetX.Enabled=true
      assetX:SetAttribute("HITSTOP",damage_data.HitStop)
-     local assetY = assetX:Clone()
-     assetY.Enabled=true
+     assetX.Parent=that.Model
 
-     assetX.Parent=Model
-     assetY.Parent=that.Model
-     
+     local DAMAGE_THING = Instance.new("Part")
+     DAMAGE_THING.Size = Vector3.zero
+     DAMAGE_THING.Transparency = 1
+     DAMAGE_THING.CanCollide = false ; DAMAGE_THING.CanTouch = false ; DAMAGE_THING.CanQuery = false
+     DAMAGE_THING.CFrame = that.Root.CFrame
+     DAMAGE_THING.Velocity = V3(math.random(-12,12),math.random(30,60),math.random(-12,12))
+     DAMAGE_THING.Parent = workspace
+
+     local DAMAGE_UI = Instance.new("BillboardGui",DAMAGE_THING)
+     DAMAGE_UI.Size=UDim2.new(100,0,2,0)
+     DAMAGE_UI.AlwaysOnTop=true
+
+     local DAMAGE_TXT = Instance.new("TextLabel",DAMAGE_UI)
+     DAMAGE_TXT.Text = string.format('%.1f',damage_data.Damage)
+     DAMAGE_TXT.Font = Enum.Font.SourceSansBold
+     DAMAGE_TXT.TextScaled = 1
+     DAMAGE_TXT.TextColor3 = (damage_data.Damage>=20) and COLOR(1,0,0) or (damage_data.Damage>=8) and COLOR(0.5,1,0) or (damage_data.Damage>=3) and COLOR(1,1,0) or COLOR(1,1,1)
+     DAMAGE_TXT.TextStrokeTransparency = 0
+     DAMAGE_TXT.BackgroundTransparency = 1
+     DAMAGE_TXT.Size=UDim2.new(1,0,1,0)
+     Service'TweenService':Create(DAMAGE_UI,TweenInfo.new(0.2,Enum.EasingStyle.Linear,Enum.EasingDirection.In,0,false,0.8),{Size=UDim2.new(0,0,0,0)}):Play()
+
+     SET_DEBRIS(DAMAGE_THING, 1)
+
+     SET_HEALTH(that.Model, GET_HEALTH(that.Model)-math.ceil(damage_data.Damage*10))
+
      HIT_STOP+=damage_data.HitStop or 0
 end
 
@@ -364,7 +410,7 @@ function ATTACK ( attack_data )
                HITBOX (HB_ID, HB_PART, HB_DATA.Host, HB_DATA.Size, HB_DATA.Off, HB_DATA.Frames, HB_DATA.HitOwner, HB_DATA.Color,
                function(ID,PART,hit,that,thatHumanoid,thatRoot,thatTICK)
                     ATTACKWHIFF = false ; ATTACKLANDED = true
-                    LOCKED = thatRoot ; LOCKED_TIMER = 300
+                    LOCKED = LOCKED or thatRoot ; LOCKED_TIMER = 300
                     DAMAGE { Damage=HB_DATA.Damage,DamageType=HB_DATA.DamageType,HitStop=HB_DATA.HitStop,HitStun=HB_DATA.HitStun,that={Model=that,Humanoid=thatHumanoid,Root=thatRoot} }
                     KNOCKBACK { that, Velocity=HB_DATA.Knockback, MaxForce=HB_DATA.MaxForce, Time=HB_DATA.KnockbackTime }
                     if HB_DATA.Recoil then
@@ -374,7 +420,7 @@ function ATTACK ( attack_data )
                     if (HB_DATA.Rehit>0) then
                          task.delay(HB_DATA.Rehit/60,function()
                               if(HITBOXES [ID] ['$result'] [that] and HITBOXES [ID] ['$result'] [that].tick==thatTICK) then
-                                   HITBOXES [ID] ['result'] [that]=nil
+                                   HITBOXES [ID] ['$result'] [that]=nil
                               end
                          end)
                     end
@@ -415,6 +461,19 @@ Humanoid.FreeFalling:Connect(function()
      end)
 end
 
+IMMUNE = false
+local HEALTH_OLD = Humanoid.Health
+Humanoid.HealthChanged:Connect(function(HEALTH_NEW)
+     if (HEALTH_NEW<=HEALTH_OLD and (BLOCKING or IMMUNE)) then
+          Humanoid.Health=HEALTH_OLD
+          if (BLOCKING) then
+               KNOCKBACK { Model,Velocity = GET_LOOK()*-2 }
+               SET_SOUND (SND_BLOCK,Model_Body[ROOT],1.0,0.4)
+               ANIM_QUERY(ANIM_GET'BLOCKED')
+          end
+     end
+end)
+
 Chrono.loop = OnTick(function()
 Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown,false)
 Humanoid:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding,false)
@@ -423,9 +482,18 @@ TICK += 1
 LOCKED = LOCKED_TIMER>0 and LOCKED or nil
 LOCKED_TIMER = LOCKED_TIMER>0 and LOCKED_TIMER-1 or 0
 COMBO = COMBO_TIMER>0 and COMBO or 0
-COMBO_TIMER = COMBO_TIMER>0 and COMBO_TIMER-1 or 0
+COMBO_TIMER = COMBO_TIMER>0 and (HIT_STOP<=0 and COMBO_TIMER-1 or COMBO_TIMER) or 0
+INPUTBEFORE = INPUTBEFORE_TIMER>0 and INPUTBEFORE or ''
+INPUTBEFORE_TIMER = INPUTBEFORE_TIMER>0 and INPUTBEFORE_TIMER-1 or 0
 HIT_STOP = HIT_STOP>0 and HIT_STOP-1 or 0
+ROTATION.MaxTorque = ROTATION_TIMER>0 and V3(0,math.huge,0) or V3(0,0,0)
+ROTATION_TIMER = ROTATION_TIMER>0 and (HIT_STOP<=0 and ROTATION_TIMER-1 or ROTATION_TIMER) or 0
 Animator.BUSY = HIT_STOP>0
+Model_Body[ROOT].Anchored = HIT_STOP>0
+
+if(BLOCKING) then
+     SET_LOOK_AT_NEAREST()
+end
 
 for _,v in Model_Body do
      if(v : CanSetNetworkOwnership()) then
@@ -434,14 +502,18 @@ for _,v in Model_Body do
 end
 
 local function ANIMDEFAULT()
-          if(not MIDAIR) then
-               if(not RUNNING) then
-                    ANIM_QUERY_SAFE(ANIM_IDLE)
+          if(not BLOCKING) then
+               if(not MIDAIR) then
+                    if(not RUNNING) then
+                         ANIM_QUERY_SAFE(ANIM_IDLE)
+                    else
+                         ANIM_QUERY_SAFE(ANIM_RUN)
+                    end
                else
-                    ANIM_QUERY_SAFE(ANIM_RUN)
+                    ANIM_QUERY_SAFE(ANIM_JUMP)
                end
-          else
-               ANIM_QUERY_SAFE(ANIM_JUMP)
+          elseif(BLOCKING and not CURRENT) then
+               ANIM_QUERY_SAFE(ANIM_GET'BLOCK')
           end
      end
 
@@ -468,6 +540,7 @@ __DEBUG_TEXT.Text = [[-- CHRONO DEBUGGING --
 RUNNING：　]]..tostring(RUNNING)..[[　
 MID-AIR：　]]..tostring(MIDAIR)..[[　
 COMBO：　]]..tostring(COMBO)..(COMBO_TIMER>0 and ' ('..tostring(COMBO_TIMER)..')' or '（、；ｖ；）')..[[　
+INPUT：　]]..(INPUTBEFORE_TIMER>0 and INPUTBEFORE or '無し')..[[　
 ATTACKING：　]]..tostring(ATTACKING)..(ATTACKWHIFF and ' (WHIFFED)' or '')..(ATTACKLANDED and ' (HIT)' or '')..[[　
 ]]
 end)
@@ -477,7 +550,50 @@ end)
 function INPUT_ATTACK()
 if (BUSY<=0) then
 
+     -- ATTACK_A10 --
+     if (INPUTBEFORE=='↑') then
+     SET_COMBO(1,60)
+     BUSY+=1
+     ANIM_BUSY=true
+     ANIM_QUERY(ANIM_GET('ATTACK_A01'))
+     SET_LOOK_AT_NEAREST()
+     AFTERIMAGE( Model )
+     FRAME{Frames=5}
+     SET_SOUND(SND_LUNGE,Sword.PrimaryPart,1.5)
+     KNOCKBACK { Model, Velocity=GET_LOOK()*9 }
+     SWORD_TRAIL=true
+     ATTACK { Frames=20, Whiff=12, Hitboxes={ [0]={
+          [0]={Damage=2.5,DamageType='',HitStop=3,HitStun=0, Knockback=GET_LOOK()*9,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT1,Pitch=1.0,Volume=0.6}, Rehit=4, Host=Model_Body[HAND_R],Size=V3(1,6,7),Off=COORD(0,0,-3.5),Frames=19,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
+          [1]={Damage=3.0,DamageType='',HitStop=12,HitStun=0, Knockback=GET_LOOK()*11,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT1,Pitch=1.0,Volume=0.8}, Rehit=13, Host=Model_Body[HAND_R],Size=V3(3,6,4),Off=COORD(0,0,-8),Frames=19,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[12]=function() SWORD_TRAIL=false end} }
+     BUSY-=1
+     ANIM_BUSY=false
+     return
+     end
+
+     -- ATTACK_A11 --
+     if (INPUTBEFORE=='↑↑') then
+     SET_COMBO(1,60)
+     BUSY+=1
+     ANIM_BUSY=true
+     ANIM_QUERY(ANIM_GET('ATTACK_A00'))
+     SET_LOOK_AT_NEAREST()
+     SET_SOUND(SND_SHEATHE,Sword.PrimaryPart,1.5)
+     KNOCKBACK { Model, Velocity=GET_LOOK()*70 }
+     AFTERIMAGE( Model )
+     FRAME{Frames=14}
+     SET_SOUND(SND_LUNGE,Sword.PrimaryPart,0.9)
+     KNOCKBACK { Model, Velocity=GET_LOOK()*-70 }
+     SWORD_TRAIL=true
+     ATTACK { Frames=20, Whiff=12, Hitboxes={ [0]={
+          [0]={Damage=4.0,DamageType='',HitStop=3,HitStun=0, Knockback=GET_LOOK()*-20,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT3,Pitch=1.0,Volume=0.6}, Rehit=4, Host=Model_Body[HAND_R],Size=V3(6,6,7),Off=COORD(0,0,-3.5),Frames=6,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
+          [1]={Damage=4.0,DamageType='',HitStop=12,HitStun=0, Knockback=GET_LOOK()*-25,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT3,Pitch=1.0,Volume=0.8}, Rehit=13, Host=Model_Body[HAND_R],Size=V3(1,1,4),Off=COORD(0,0,-8),Frames=6,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[12]=function() SWORD_TRAIL=false end} }
+     BUSY-=1
+     ANIM_BUSY=false
+     return
+     end
+
      --- ATTACK_A0 series ---
+     if (not MIDAIR) then
      if (COMBO==0) then
 
      SET_COMBO(1,60)
@@ -490,8 +606,8 @@ if (BUSY<=0) then
      KNOCKBACK { Model, Velocity=GET_LOOK()*13 }
      SWORD_TRAIL=true
      ATTACK { Frames=26, Whiff=15, Hitboxes={ [0]={
-          [0]={Damage=1.0,DamageType='',HitStop=6,HitStun=0, Knockback=GET_LOOK()*15,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT1,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(1,6,7),Off=COORD(0,0,-3.5),Frames=12,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
-          [1]={Damage=1.0,DamageType='',HitStop=12,HitStun=0, Knockback=GET_LOOK()*20,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT2,Pitch=1.0,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,2),Off=COORD(0,0,-8),Frames=12,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[12]=function() SWORD_TRAIL=false end} }
+          [0]={Damage=1.0,DamageType='',HitStop=6,HitStun=0, Knockback=GET_LOOK()*15,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT2,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(1,6,7),Off=COORD(0,0,-3.5),Frames=12,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
+          [1]={Damage=1.5,DamageType='',HitStop=12,HitStun=0, Knockback=GET_LOOK()*20,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT2,Pitch=1.0,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,4),Off=COORD(0,0,-8),Frames=12,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[12]=function() SWORD_TRAIL=false end} }
      BUSY-=1
      ANIM_BUSY=false
      
@@ -500,15 +616,15 @@ if (BUSY<=0) then
      SET_COMBO(1,60)
      BUSY+=1
      ANIM_BUSY=true
-     ANIM_QUERY(ANIM_GET('ATTACK_A00'))
+     ANIM_QUERY(ANIM_GET('ATTACK_A01'))
      SET_LOOK_AT_NEAREST()
      FRAME{Frames=5}
      SET_SOUND(SND_SLASH,Sword.PrimaryPart,1)
      KNOCKBACK { Model, Velocity=GET_LOOK()*9 }
      SWORD_TRAIL=true
-     ATTACK { Frames=24, Whiff=12, Hitboxes={ [0]={
-          [0]={Damage=1.0,DamageType='',HitStop=3,HitStun=0, Knockback=GET_LOOK()*9,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT1,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(1,6,7),Off=COORD(0,0,-3.5),Frames=10,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
-          [1]={Damage=1.0,DamageType='',HitStop=12,HitStun=0, Knockback=GET_LOOK()*9,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT2,Pitch=1.0,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,2),Off=COORD(0,0,-8),Frames=10,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[12]=function() SWORD_TRAIL=false end} }
+     ATTACK { Frames=20, Whiff=12, Hitboxes={ [0]={
+          [0]={Damage=1.0,DamageType='',HitStop=3,HitStun=0, Knockback=GET_LOOK()*9,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT1,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(1,6,7),Off=COORD(0,0,-3.5),Frames=19,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
+          [1]={Damage=1.5,DamageType='',HitStop=12,HitStun=0, Knockback=GET_LOOK()*11,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT1,Pitch=1.0,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,4),Off=COORD(0,0,-8),Frames=19,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[12]=function() SWORD_TRAIL=false end} }
      BUSY-=1
      ANIM_BUSY=false
      
@@ -517,18 +633,170 @@ if (BUSY<=0) then
      SET_COMBO(1,60)
      BUSY+=1
      ANIM_BUSY=true
-     ANIM_QUERY(ANIM_GET('ATTACK_A00'))
+     ANIM_QUERY(ANIM_GET('ATTACK_A02'))
      SET_LOOK_AT_NEAREST()
      FRAME{Frames=4}
      SET_SOUND(SND_SLASH,Sword.PrimaryPart,1.2)
      KNOCKBACK { Model, Velocity=GET_LOOK()*9 }
      SWORD_TRAIL=true
+     ATTACK { Frames=23, Whiff=10, Hitboxes={ [0]={
+          [0]={Damage=1.0,DamageType='',HitStop=3,HitStun=0, Knockback=GET_LOOK()*9,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT1,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(1,6,7),Off=COORD(0,0,-3.5),Frames=19,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
+          [1]={Damage=1.5,DamageType='',HitStop=12,HitStun=0, Knockback=GET_LOOK()*9,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT1,Pitch=1.0,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,4),Off=COORD(0,0,-8),Frames=19,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[12]=function() SWORD_TRAIL=false end} }
+     BUSY-=1
+     ANIM_BUSY=false
+     
+     elseif (COMBO==3) then
+
+     SET_COMBO(1,60)
+     BUSY+=1
+     ANIM_BUSY=true
+     ANIM_QUERY(ANIM_GET('ATTACK_A03'))
+     SET_LOOK_AT_NEAREST()
+     FRAME{Frames=5}
+     SET_SOUND(SND_LUNGE,Sword.PrimaryPart,1.5)
+     KNOCKBACK { Model, Velocity=GET_LOOK()*12 }
+     SWORD_TRAIL=true
+     ATTACK { Frames=13, Whiff=11, Hitboxes={ [0]={
+          [0]={Damage=1.0,DamageType='',HitStop=3,HitStun=0, Knockback=GET_LOOK()*12,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT0,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(1,6,7),Off=COORD(0,0,-3.5),Frames=9,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
+          [1]={Damage=1.5,DamageType='',HitStop=12,HitStun=0, Knockback=GET_LOOK()*14,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT0,Pitch=1.0,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,4),Off=COORD(0,0,-8),Frames=9,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[8]=function() SWORD_TRAIL=false end} }
+     BUSY-=1
+     ANIM_BUSY=false
+     
+     elseif (COMBO==4) then
+
+     SET_COMBO(1,60)
+     BUSY+=1
+     ANIM_BUSY=true
+     ANIM_QUERY(ANIM_GET('ATTACK_A04'))
+     SET_LOOK_AT_NEAREST()
+     FRAME{Frames=4}
+     SET_SOUND(SND_LUNGE,Sword.PrimaryPart,1.3)
+     KNOCKBACK { Model, Velocity=GET_LOOK()*9 }
+     SWORD_TRAIL=true
+     ATTACK { Frames=11, Whiff=11, Hitboxes={ [0]={
+          [0]={Damage=0.5,DamageType='',HitStop=3,HitStun=0, Knockback=GET_LOOK()*9,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT0,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,7),Off=COORD(0,0,-3.5),Frames=9,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
+          [1]={Damage=1.0,DamageType='',HitStop=12,HitStun=0, Knockback=GET_LOOK()*9,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT0,Pitch=1.0,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,4),Off=COORD(0,0,-8),Frames=9,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[8]=function() SWORD_TRAIL=false end} }
+     BUSY-=1
+     ANIM_BUSY=false
+     
+     elseif (COMBO==5) then
+
+     SET_COMBO(1,60)
+     BUSY+=1
+     ANIM_BUSY=true
+     ANIM_QUERY(ANIM_GET('ATTACK_A05'))
+     SET_LOOK_AT_NEAREST()
+     FRAME{Frames=3}
+     SET_SOUND(SND_LUNGE,Sword.PrimaryPart,1.45)
+     KNOCKBACK { Model, Velocity=GET_LOOK()*9 }
+     SWORD_TRAIL=true
+     ATTACK { Frames=17, Whiff=12, Hitboxes={ [0]={
+          [0]={Damage=0.5,DamageType='',HitStop=3,HitStun=0, Knockback=GET_LOOK()*9,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT1,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,7),Off=COORD(0,0,-3.5),Frames=8,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
+          [1]={Damage=1.0,DamageType='',HitStop=12,HitStun=0, Knockback=GET_LOOK()*9,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT1,Pitch=1.0,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,4),Off=COORD(0,0,-8),Frames=8,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[8]=function() SWORD_TRAIL=false end} }
+     BUSY-=1
+     ANIM_BUSY=false
+     
+     elseif (COMBO==6) then
+
+     SET_COMBO(1,70)
+     BUSY+=1
+     ANIM_BUSY=true
+     ANIM_QUERY(ANIM_GET('ATTACK_A06'))
+     SET_LOOK_AT_NEAREST()
+     FRAME{Frames=9}
+     SET_SOUND(SND_LUNGE,Sword.PrimaryPart,1)
+     KNOCKBACK { Model, Velocity=GET_LOOK()*43, Time=0.4 }
+     ATTACK { Frames=23, Whiff=10, Hitboxes={ [0]={
+          [0]={Damage=2.0,DamageType='',HitStop=7,HitStun=0, Knockback=GET_LOOK()*43,KnockbackMax=nil,KnockbackTime=0.4, Sound={data=SND_CUT3,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(1,6,7),Off=COORD(0,0,-3.5),Frames=19,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
+          [1]={Damage=2.5,DamageType='',HitStop=14,HitStun=0, Knockback=GET_LOOK()*43,KnockbackMax=nil,KnockbackTime=0.4, Sound={data=SND_CUT3,Pitch=1.0,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(1,1,7),Off=COORD(0,0,-5),Frames=19,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={} }
+     BUSY-=1
+     ANIM_BUSY=false
+     
+     elseif (COMBO==7) then
+
+     SET_COMBO(1,80)
+     BUSY+=1
+     ANIM_BUSY=true
+     ANIM_QUERY(ANIM_GET('ATTACK_A07'))
+     SET_LOOK_AT_NEAREST()
+     FRAME{Frames=12}
+     SET_SOUND(SND_SHEATHE,Sword.PrimaryPart,1.2)
+     KNOCKBACK { Model, Velocity=GET_LOOK()*13 }
+     SWORD_TRAIL=true
+     ATTACK { Frames=13, Whiff=0, Hitboxes={ [0]={
+          [0]={Damage=2.0,DamageType='',HitStop=9,HitStun=0, Knockback=GET_LOOK()*13,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT0,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(12,10,7),Off=COORD(0,0,-3.5),Frames=8,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
+          [1]={Damage=2.5,DamageType='',HitStop=12,HitStun=0, Knockback=GET_LOOK()*13,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT0,Pitch=1.0,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(5,8,4),Off=COORD(0,0,-8),Frames=8,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[8]=function() SWORD_TRAIL=false end} }
+     KNOCKBACK { Model, Velocity=GET_LOOK()*13 }
+     SET_LOOK_AT_NEAREST()
+     SWORD_TRAIL=true
+     SET_SOUND(SND_SHEATHE,Sword.PrimaryPart,1.1)
+     ATTACK { Frames=21, Whiff=4, Hitboxes={ [0]={
+          [0]={Damage=3.0,DamageType='',HitStop=9,HitStun=0, Knockback=GET_LOOK()*13,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT0,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(12,10,7),Off=COORD(0,0,-3.5),Frames=9,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
+          [1]={Damage=3.5,DamageType='',HitStop=12,HitStun=0, Knockback=GET_LOOK()*13,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT0,Pitch=1.0,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(5,8,4),Off=COORD(0,0,-8),Frames=9,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[8]=function() SWORD_TRAIL=false end} }
+     BUSY-=1
+     ANIM_BUSY=false
+     
+     elseif (COMBO==8) then
+
+     SET_COMBO(1,80)
+     BUSY+=1
+     ANIM_BUSY=true
+     ANIM_QUERY(ANIM_GET('ATTACK_A08'))
+     SET_LOOK_AT_NEAREST()
+     SET_SOUND(SND_SPCSHORT,Sword.PrimaryPart,1.1)
+     SET_SOUND(SND_SHEATHE,Sword.PrimaryPart,1.0)
+     HL(Model, 0,1,COLOR(1,1,1),COLOR(1,1,1),0.2)
+     FRAME{Frames=24}
+     SET_SOUND(SND_LUNGE,Sword.PrimaryPart,0.8)
+     KNOCKBACK { Model, Velocity=GET_LOOK()*9 }
+     SWORD_TRAIL=true
      ATTACK { Frames=24, Whiff=10, Hitboxes={ [0]={
-          [0]={Damage=1.0,DamageType='',HitStop=3,HitStun=0, Knockback=GET_LOOK()*9,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT1,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(1,6,7),Off=COORD(0,0,-3.5),Frames=10,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
-          [1]={Damage=1.0,DamageType='',HitStop=12,HitStun=0, Knockback=GET_LOOK()*9,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT2,Pitch=1.0,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,2),Off=COORD(0,0,-8),Frames=10,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[12]=function() SWORD_TRAIL=false end} }
+          [0]={Damage=5.0,DamageType='',HitStop=3,HitStun=0, Knockback=GET_LOOK()*9,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT2,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(1,6,7),Off=COORD(0,0,-3.5),Frames=11,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
+          [1]={Damage=5.5,DamageType='',HitStop=12,HitStun=0, Knockback=GET_LOOK()*9,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT2,Pitch=1.0,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,4),Off=COORD(0,0,-8),Frames=11,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[8]=function() SWORD_TRAIL=false end} }
+     BUSY-=1
+     ANIM_BUSY=false
+     
+     elseif (COMBO==9) then
+
+     SET_COMBO(1,80)
+     BUSY+=1
+     ANIM_BUSY=true
+     ANIM_QUERY(ANIM_GET('ATTACK_A09'))
+     SET_LOOK_AT_NEAREST()
+     SET_SOUND(SND_SPCSHORT,Sword.PrimaryPart,1.0)
+     SET_SOUND(SND_SHEATHE,Sword.PrimaryPart,0.9)
+     HL(Model, 0,1,COLOR(1,1,1),COLOR(1,1,1),0.2)
+     KNOCKBACK { Model, Velocity=GET_LOOK()*-12 }
+     FRAME{Frames=24}
+     SET_SOUND(SND_LUNGE,Sword.PrimaryPart,0.7)
+     KNOCKBACK { Model, Velocity=GET_LOOK()*9 }
+     SWORD_TRAIL=true
+     ATTACK { Frames=38, Whiff=5, Hitboxes={ [0]={
+          [0]={Damage=5.0,DamageType='',HitStop=3,HitStun=0, Knockback=GET_LOOK()*9,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT3,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(1,6,7),Off=COORD(0,0,-3.5),Frames=18,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
+          [1]={Damage=5.5,DamageType='',HitStop=12,HitStun=0, Knockback=GET_LOOK()*9,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT3,Pitch=1.0,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,4),Off=COORD(0,0,-8),Frames=18,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[20]=function() SWORD_TRAIL=false end} }
+     BUSY-=1
+     ANIM_BUSY=false
+     
+     elseif (COMBO==10) then
+
+     SET_COMBO(0,0)
+     BUSY+=1
+     ANIM_BUSY=true
+     ANIM_QUERY(ANIM_GET('ATTACK_A0A'))
+     SET_LOOK_AT_NEAREST()
+     SET_SOUND(SND_SPCSHORT,Sword.PrimaryPart,0.9)
+     SET_SOUND(SND_SHEATHE,Sword.PrimaryPart,0.8)
+     HL(Model, 0,1,COLOR(1,1,1),COLOR(1,1,1),0.2)
+     FRAME{Frames=29}
+     SET_SOUND(SND_LUNGE,Sword.PrimaryPart,0.5)
+     KNOCKBACK { Model, Velocity=GET_LOOK()*54, Time=0.6 }
+     ATTACK { Frames=45, Whiff=10, Hitboxes={ [0]={
+          [0]={Damage=6.0,DamageType='',HitStop=20,HitStun=0, Knockback=GET_LOOK()*55,KnockbackMax=nil,KnockbackTime=0.6, Sound={data=SND_CUT3,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(6,6,7),Off=COORD(0,0,-3.5),Frames=25,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
+          [1]={Damage=6.5,DamageType='',HitStop=20,HitStun=0, Knockback=GET_LOOK()*56,KnockbackMax=nil,KnockbackTime=0.6, Sound={data=SND_CUT3,Pitch=1.0,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(1,1,4),Off=COORD(0,0,-8),Frames=25,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={} }
      BUSY-=1
      ANIM_BUSY=false
 
+     end
      end
 
 end
@@ -536,19 +804,35 @@ end
 
 function INPUT_ABILITY()
 if (BUSY<=0) then
+     SET_LOOK_AT_NEAREST()
+     FRAME{Frames=4}
 end
 end
 
 function INPUT_CRITICAL()
 if (BUSY<=0) then
+     SET_LOOK_AT_NEAREST()
+     FRAME{Frames=4}
 end
 end
 
+INPUTBEFORE='' ; INPUTBEFORE_TIMER = 0
+INPUTS={ATTACK=false,ABILITY=false,CRITICAL=false}
+INPUTF={ATTACK=INPUT_ATTACK,ABILITY=INPUT_ABILITY,CRITICAL=INPUT_CRITICAL}
 ----------------------------------------------------------------------------------------------------
 
-Remote.OnServerEvent:Connect(function( plr,x )
-     if(x=='ATTACK') then
-     INPUT_ATTACK()
+Remote.OnServerEvent:Connect(function( plr,x,z )
+     if(x:sub(1,1)~='@') then
+          INPUTS [x]=z
+          repeat if(not BLOCKING) then INPUTF [x]() end INPUTBEFORE='' INPUTBEFORE_TIMER=0 task.wait() until not INPUTS [x]
+     else
+          local x=x:sub(2)
+          if(x=='B') then BLOCKING=z return end
+          INPUTBEFORE_TIMER=10
+          if(x=='W') then INPUTBEFORE=INPUTBEFORE..'↑'
+          elseif(x=='A') then INPUTBEFORE=INPUTBEFORE..'←'
+          elseif(x=='S') then INPUTBEFORE=INPUTBEFORE..'↓'
+          elseif(x=='D') then INPUTBEFORE=INPUTBEFORE..'→' end
      end
 end)
 
@@ -565,7 +849,30 @@ __DEBUG_UI.Parent = thisPlayer.PlayerGui
 Service'UserInputService'.InputBegan:Connect(function( key,registered )
      if (not registered) then
           if (key.UserInputType == Enum.UserInputType.MouseButton1) then
-               Remote:FireServer('ATTACK')
+               Remote:FireServer('ATTACK',true)
+               end
+          if (key.KeyCode == Enum.KeyCode.W) then
+               Remote:FireServer('@W',true)
+          elseif (key.KeyCode == Enum.KeyCode.A) then
+               Remote:FireServer('@A',true)
+          elseif (key.KeyCode == Enum.KeyCode.S) then
+               Remote:FireServer('@S',true)
+          elseif (key.KeyCode == Enum.KeyCode.D) then
+               Remote:FireServer('@D',true)
+               end
+          if (key.KeyCode == Enum.KeyCode.F) then
+               Humanoid.WalkSpeed /= 2
+               Remote:FireServer('@B',true)
+               end
+          end
+     end)
+Service'UserInputService'.InputEnded:Connect(function( key,registered )
+     if (not registered) then
+          if (key.UserInputType == Enum.UserInputType.MouseButton1) then
+               Remote:FireServer('ATTACK',false)
+          elseif (key.KeyCode == Enum.KeyCode.F) then
+               Humanoid.WalkSpeed *= 2
+               Remote:FireServer('@B',false)
                end
           end
      end)
