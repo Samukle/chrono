@@ -26,13 +26,13 @@ Motor.Part1 = Actual
 Motor.Parent = Actual
 IT.Parent = Motor
 
-local Shake=script:GetAttribute('HITSTOP')
 local x=1
-for i=1,Shake do
+repeat
+     script:SetAttribute('HITSTOP',script:GetAttribute('HITSTOP')-1)
      Motor.C1=C1*CFrame.new(x*0.2,0,0)
      x=(x==0) and 1 or (x==1) and -1 or (x==-1) and 0 or 0
      task.wait()
-     end
+until script:GetAttribute('HITSTOP')>0
 
 Motor:Destroy()
 script:Destroy()

@@ -73,6 +73,8 @@ if (self.CURRENT) then
                     diff = DATA[THAT][PROP_TIME]-DATA[THIS][PROP_TIME]
                     alpha = (self.TICK_SEC-DATA[THIS][PROP_TIME])/diff
                     DATA[PROP_JOINT].C0 = DATA[THIS].CF:Lerp(DATA[THAT].CF,alpha)
+               elseif(DATA[THIS] and not DATA[THAT]) then
+                    DATA[PROP_JOINT].C0 = DATA[THIS].CF:Lerp(DATA[THIS].CF,1)
                end
           end
      end

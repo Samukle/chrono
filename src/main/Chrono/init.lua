@@ -16,6 +16,12 @@ local __THE_MODULE = Service'RunService':IsStudio() and IsServer and require(gam
 
 local ASSET = require(script:WaitForChild("ASSET"))
 
+UI = script:WaitForChild'UI'
+local UIHealth = UI.Health
+local UIBar = UIHealth.Bar
+local UIBarText = UIHealth.TextLabel
+UIBarText.Font=Enum.Font.SourceSansBold
+
 __DEBUG_UI   = script:WaitForChild'DEBUG'
 __DEBUG_TEXT = __DEBUG_UI:WaitForChild'TextLabel'
 
@@ -359,10 +365,13 @@ function DAMAGE ( damage_data )
      local that = damage_data.that
      HL(that.Model,0,1,COLOR(1,1,1),COLOR(1,1,1),0.5)
      SET_SOUND(SND_MARKER,that.Root,1,1)
-     local assetX = ASSET("HITSTOP_SHAKE")
+     local assetX do for _,x in that.Model:GetChildren() do if (x.Name=="HITSTOP_SHAKE" and x:GetAttribute("HITSTOP")) then assetX=x end end end
+     if(not assetX) then
+     assetX = ASSET("HITSTOP_SHAKE")
      assetX.Enabled=true
      assetX:SetAttribute("HITSTOP",damage_data.HitStop)
      assetX.Parent=that.Model
+     else assetX:SetAttribute("HITSTOP",damage_data.HitStop) end
 
      local DAMAGE_THING = Instance.new("Part")
      DAMAGE_THING.Size = Vector3.zero
@@ -462,16 +471,34 @@ Humanoid.FreeFalling:Connect(function()
 end
 
 IMMUNE = false
+local HEALTH_INDEX = 0
 local HEALTH_OLD = Humanoid.Health
+local function HEALTH_UI_THING(v,color)
+     local x = UIBarText:Clone()
+     x.Text = v
+     x.Size = UDim2.new(2,0,2,0)
+     x.TextColor3 = color
+     x.Parent = UIHealth
+     Service'TweenService':Create(x,TweenInfo.new(1,Enum.EasingStyle.Quad,Enum.EasingDirection.Out,0,false,0),{Position=x.Position+UDim2.new(0,0,-5,0)}):Play()
+     Service'TweenService':Create(x,TweenInfo.new(0.2,Enum.EasingStyle.Quad,Enum.EasingDirection.Out,0,false,0.8),{Size=UDim2.new(0,0,0,0)}):Play()
+     SET_DEBRIS(x,1)
+end
 Humanoid.HealthChanged:Connect(function(HEALTH_NEW)
-     if (HEALTH_NEW<=HEALTH_OLD and (BLOCKING or IMMUNE)) then
+     local thisHEALTH_INDEX = HEALTH_INDEX+1
+     HEALTH_INDEX=thisHEALTH_INDEX
+     if (HEALTH_NEW<HEALTH_OLD and (BLOCKING or IMMUNE)) then
           Humanoid.Health=HEALTH_OLD
           if (BLOCKING) then
                KNOCKBACK { Model,Velocity = GET_LOOK()*-2 }
                SET_SOUND (SND_BLOCK,Model_Body[ROOT],1.0,0.4)
                ANIM_QUERY(ANIM_GET'BLOCKED')
           end
+     elseif (HEALTH_NEW<HEALTH_OLD) then
+          HEALTH_UI_THING(string.format('<i>%.1f</i>',(HEALTH_NEW-HEALTH_OLD)/10),COLOR(1,0,0))
+     elseif (HEALTH_NEW>HEALTH_OLD) then
+          HEALTH_UI_THING(string.format('<i>+%.1f</i>',(HEALTH_NEW-HEALTH_OLD)/10),COLOR(0,1,0))
      end
+     HEALTH_OLD=Humanoid.Health
 end)
 
 Chrono.loop = OnTick(function()
@@ -482,7 +509,7 @@ TICK += 1
 LOCKED = LOCKED_TIMER>0 and LOCKED or nil
 LOCKED_TIMER = LOCKED_TIMER>0 and LOCKED_TIMER-1 or 0
 COMBO = COMBO_TIMER>0 and COMBO or 0
-COMBO_TIMER = COMBO_TIMER>0 and (HIT_STOP<=0 and COMBO_TIMER-1 or COMBO_TIMER) or 0
+COMBO_TIMER = COMBO_TIMER>0 and ((HIT_STOP<=0 and not BLOCKING) and COMBO_TIMER-1 or COMBO_TIMER) or 0
 INPUTBEFORE = INPUTBEFORE_TIMER>0 and INPUTBEFORE or ''
 INPUTBEFORE_TIMER = INPUTBEFORE_TIMER>0 and INPUTBEFORE_TIMER-1 or 0
 HIT_STOP = HIT_STOP>0 and HIT_STOP-1 or 0
@@ -490,6 +517,10 @@ ROTATION.MaxTorque = ROTATION_TIMER>0 and V3(0,math.huge,0) or V3(0,0,0)
 ROTATION_TIMER = ROTATION_TIMER>0 and (HIT_STOP<=0 and ROTATION_TIMER-1 or ROTATION_TIMER) or 0
 Animator.BUSY = HIT_STOP>0
 Model_Body[ROOT].Anchored = HIT_STOP>0
+
+UIBar.Size=UDim2.new(Humanoid.Health/Humanoid.MaxHealth,0,1,0)
+UIBar.BackgroundColor3 = (Humanoid.Health>=Humanoid.MaxHealth/2) and COLOR(0.29,1,0.3) or (Humanoid.Health>=Humanoid.MaxHealth/4) and COLOR(1,1,0) or COLOR(1,0,0)
+UIBarText.Text=Humanoid.Health>0 and string.format('HP: %.1f/%.1f',Humanoid.Health/10,Humanoid.MaxHealth/10) or '<b><i>DEAD</i></b>'
 
 if(BLOCKING) then
      SET_LOOK_AT_NEAREST()
@@ -502,18 +533,14 @@ for _,v in Model_Body do
 end
 
 local function ANIMDEFAULT()
-          if(not BLOCKING) then
-               if(not MIDAIR) then
-                    if(not RUNNING) then
-                         ANIM_QUERY_SAFE(ANIM_IDLE)
-                    else
-                         ANIM_QUERY_SAFE(ANIM_RUN)
-                    end
+          if(not MIDAIR) then
+               if(not RUNNING) then
+                    ANIM_QUERY_SAFE(ANIM_IDLE)
                else
-                    ANIM_QUERY_SAFE(ANIM_JUMP)
+                    ANIM_QUERY_SAFE(ANIM_RUN)
                end
-          elseif(BLOCKING and not CURRENT) then
-               ANIM_QUERY_SAFE(ANIM_GET'BLOCK')
+          else
+               ANIM_QUERY_SAFE(ANIM_JUMP)
           end
      end
 
@@ -845,6 +872,7 @@ elseif(IsClient) then
 
 workspace.CurrentCamera.CameraSubject = Humanoid
 __DEBUG_UI.Parent = thisPlayer.PlayerGui
+UI.Parent = thisPlayer.PlayerGui
 
 Service'UserInputService'.InputBegan:Connect(function( key,registered )
      if (not registered) then
