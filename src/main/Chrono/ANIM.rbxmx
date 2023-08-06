@@ -23574,7 +23574,7 @@
 				<BinaryString name="AttributesSerialize"></BinaryString>
 				<float name="AuthoredHipHeight">2</float>
 				<BinaryString name="GuidBinaryString">AAAAAAAAAAAAAAAAAAAAAA==</BinaryString>
-				<bool name="Loop">true</bool>
+				<bool name="Loop">false</bool>
 				<string name="Name">BLOCK</string>
 				<token name="Priority">2</token>
 				<int64 name="SourceAssetId">-1</int64>

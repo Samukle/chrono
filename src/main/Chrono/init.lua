@@ -142,7 +142,13 @@ ANIM_QUERY = function( INST )
 Animator:PLAY(INST)
 end
 ANIM_QUERY_SAFE = function(INST)
-if(Animator.CURRENT ~= INST) then ANIM_QUERY(INST) return true else return false end
+if(Animator.CURRENT ~= INST and (
+((INST ~= ANIM_JUMP or INST ~= ANIM_IDLE or INST ~= ANIM_RUN)
+and (Animator.CURRENT == ANIM_JUMP or Animator.CURRENT == ANIM_IDLE or Animator.CURRENT == ANIM_RUN)) or
+((INST == ANIM_JUMP or INST == ANIM_IDLE or INST == ANIM_RUN)
+and (Animator.CURRENT == ANIM_JUMP or Animator.CURRENT == ANIM_IDLE or Animator.CURRENT == ANIM_RUN)) or
+Animator.CURRENT==nil)
+) then ANIM_QUERY(INST) return true else return false end
 end
 ANIM_POSE = function(LIST)
 Animator:POSE(LIST)
@@ -533,6 +539,7 @@ for _,v in Model_Body do
 end
 
 local function ANIMDEFAULT()
+     if(not BLOCKING) then
           if(not MIDAIR) then
                if(not RUNNING) then
                     ANIM_QUERY_SAFE(ANIM_IDLE)
@@ -542,7 +549,10 @@ local function ANIMDEFAULT()
           else
                ANIM_QUERY_SAFE(ANIM_JUMP)
           end
+     else
+          ANIM_QUERY_SAFE(ANIM_GET'BLOCK')
      end
+end
 
 if(Animator.CURRENT) then
      if(not ANIM_BUSY) then
