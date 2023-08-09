@@ -10,7 +10,7 @@ IT.CanTouch=false
 IT.Transparency=1
 IT.Size=Vector3.zero
 
-local Actual = Root
+local Actual = Root or Model:FindFirstChild("Torso") or Model:FindFirstChild("UpperTorso") or Model:FindFirstChild("LowerTorso") or Model:FindFirstChild("Head") or Model:FindFirstChildOfClass("Part")
 do
 local q = Actual:FindFirstChildOfClass('Motor6D')
 if(q.Part1) then Actual=q.Part1 end
@@ -32,7 +32,7 @@ repeat
      Motor.C1=C1*CFrame.new(x*0.2,0,0)
      x=(x==0) and 1 or (x==1) and -1 or (x==-1) and 0 or 0
      task.wait()
-until script:GetAttribute('HITSTOP')>0
+until script:GetAttribute('HITSTOP')<=0
 
 Motor:Destroy()
 script:Destroy()
