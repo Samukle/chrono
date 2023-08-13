@@ -115,11 +115,11 @@ UI_COMBO_SCALAR = 0
 UI_COMBO_SPIN = 0
 UI_COMBO_RANKS = {
      [0]={NAME="D", COLOR=Color3.fromRGB(135,99,57)},
-     [700]={NAME="C", COLOR=Color3.fromRGB(208,201,121)},
-     [2000]={NAME="B", COLOR=Color3.fromRGB(140,229,182)},
-     [4000]={NAME="A", COLOR=Color3.fromRGB(229,59,68)},
-     [6000]={NAME="S", COLOR=Color3.fromRGB(229,102,216)},
-     [10000]={NAME="SS", COLOR=Color3.fromRGB(255,233,110)},
+     [100]={NAME="C", COLOR=Color3.fromRGB(208,201,121)},
+     [200]={NAME="B", COLOR=Color3.fromRGB(140,229,182)},
+     [400]={NAME="A", COLOR=Color3.fromRGB(229,59,68)},
+     [600]={NAME="S", COLOR=Color3.fromRGB(229,102,216)},
+     [1000]={NAME="SS", COLOR=Color3.fromRGB(255,233,110)},
 }
 UI_COMBO_RANK_THIS = UI_COMBO_RANKS [0]
 
@@ -496,8 +496,8 @@ function DAMAGE ( damage_data )
      UI_COMBO_TIMER = (2+math.ceil(UI_COMBO_TIMER/5))*60
      UI_COMBO_HITS += 1
      UI_COMBO_SCALAR += damage_data.Damage/600
-     UI_COMBO_DAMAGE = damage_data.Damage
-     UI_COMBO_TOTAL += damage_data.Damage
+     UI_COMBO_DAMAGE = damage_data.Damage*10
+     UI_COMBO_TOTAL += damage_data.Damage*10
      local max=0 for VALUE,T in UI_COMBO_RANKS do
           if (VALUE>max and VALUE<=UI_COMBO_TOTAL) then
                UI_COMBO_RANK_THIS = T
@@ -689,17 +689,19 @@ UI_COMBO_DAMAGE = UI_COMBO_TIMER>0 and UI_COMBO_DAMAGE or 0
 UI_COMBO_HITS = UI_COMBO_TIMER>0 and UI_COMBO_HITS or 0
 UI_COMBO_TOTAL = UI_COMBO_TIMER>0 and UI_COMBO_TOTAL or 0
 UI_COMBO_TIMER = UI_COMBO_TIMER>0 and ((HIT_STOP<=0 and not BLOCKING) and UI_COMBO_TIMER-1 or UI_COMBO_TIMER) or 0
-UI_COMBO_SCALAR = 0.8*UI_COMBO_SCALAR
-UI_COMBO_SPIN += UI_COMBO_SCALAR
-UI_COMBOspinny0.Size = UDim2.new(0.5+(UI_COMBO_SCALAR*1.2),0,0.5+(UI_COMBO_SCALAR*1.2),0)
-UI_COMBOspinny0.Rotation = -UI_COMBO_SPIN
-UI_COMBOspinny1.Size = UDim2.new(0.5+(UI_COMBO_SCALAR),0,0.5+(UI_COMBO_SCALAR),0)
+UI_COMBO_SCALAR = 0.9*UI_COMBO_SCALAR
+UI_COMBO_SPIN += UI_COMBO_SCALAR*168
+UI_COMBOspinny0.Size = UDim2.new(0.5+(UI_COMBO_SCALAR*20),0,0.5+(UI_COMBO_SCALAR*20),0)
+UI_COMBOspinny0.Rotation = -UI_COMBO_SPIN*1.2
+UI_COMBOspinny1.Size = UDim2.new(0.5+(UI_COMBO_SCALAR*10),0,0.5+(UI_COMBO_SCALAR*10),0)
 UI_COMBOspinny1.Rotation = UI_COMBO_SPIN
 UI_COMBOhits.Text = UI_COMBOprefix..tostring(UI_COMBO_HITS)..UI_COMBOsuffix
 UI_COMBOtotal.Text = UI_COMBOprefix..string.format("%.1f",UI_COMBO_TOTAL/10).." ("..string.format("%.1f",UI_COMBO_DAMAGE/10)..")"..UI_COMBOsuffix
 UI_COMBOrank.Text = UI_COMBOprefix..UI_COMBO_RANK_THIS.NAME..UI_COMBOsuffix
 UI_COMBOrank.TextColor3 = UI_COMBO_RANK_THIS.COLOR
 UI_COMBOasset.Visible = UI_COMBO_TIMER>0
+
+-- TODO: UI_COMBOrank animation --
 
 UIBar.Size=UDim2.new(Humanoid.Health/Humanoid.MaxHealth,0,1,0)
 UIBar.BackgroundColor3 = (Humanoid.Health>=Humanoid.MaxHealth/2) and COLOR(0.29,1,0.3) or (Humanoid.Health>=Humanoid.MaxHealth/4) and COLOR(1,1,0) or COLOR(1,0,0)

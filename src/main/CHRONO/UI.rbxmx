@@ -631,7 +631,7 @@
 					<int name="ZIndex">3</int>
 				</Properties>
 			</Item>
-			<Item class="TextLabel" referent="RBX9EC58F64A659430B85013711CA228229">
+			<Item class="TextLabel" referent="RBXAF28CF4684894067B250CEF23A17B5F3">
 				<Properties>
 					<bool name="Active">false</bool>
 					<Vector2 name="AnchorPoint">
@@ -660,6 +660,7 @@
 						<Family><url>rbxasset://fonts/families/LegacyArial.json</url></Family>
 						<Weight>400</Weight>
 						<Style>Normal</Style>
+						<CachedFaceId><url>rbxasset://fonts/arial.ttf</url></CachedFaceId>
 					</Font>
 					<bool name="Interactable">true</bool>
 					<int name="LayoutOrder">0</int>
