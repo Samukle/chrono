@@ -115,11 +115,12 @@ UI_COMBO_SCALAR = 0
 UI_COMBO_SPIN = 0
 UI_COMBO_RANKS = {
      [0]={NAME="D", COLOR=Color3.fromRGB(135,99,57)},
-     [100]={NAME="C", COLOR=Color3.fromRGB(208,201,121)},
-     [200]={NAME="B", COLOR=Color3.fromRGB(140,229,182)},
-     [400]={NAME="A", COLOR=Color3.fromRGB(229,59,68)},
-     [600]={NAME="S", COLOR=Color3.fromRGB(229,102,216)},
-     [1000]={NAME="SS", COLOR=Color3.fromRGB(255,233,110)},
+     [400]={NAME="C", COLOR=Color3.fromRGB(208,201,121)},
+     [1000]={NAME="B", COLOR=Color3.fromRGB(140,229,182)},
+     [1700]={NAME="A", COLOR=Color3.fromRGB(229,59,68)},
+     [2000]={NAME="S", COLOR=Color3.fromRGB(229,102,216)},
+     [6000]={NAME="SS", COLOR=Color3.fromRGB(255,233,110)},
+     [9000]={NAME="SSS", COLOR=Color3.fromRGB(255,9,9)},
 }
 UI_COMBO_RANK_THIS = UI_COMBO_RANKS [0]
 
@@ -493,12 +494,12 @@ function DAMAGE ( damage_data )
      local that = damage_data.that
      HL(that.Model,0,1,COLOR(1,1,1),COLOR(1,1,1),0.5)
      SET_SOUND(SND_MARKER,that.Root,1,1)
-     UI_COMBO_TIMER = (2+math.ceil(UI_COMBO_TIMER/5))*60
+     UI_COMBO_TIMER = (2+math.ceil(UI_COMBO_TIMER/300))*60
      UI_COMBO_HITS += 1
-     UI_COMBO_SCALAR += damage_data.Damage/600
+     UI_COMBO_SCALAR += math.min(damage_data.Damage/600,0.1)
      UI_COMBO_DAMAGE = damage_data.Damage*10
      UI_COMBO_TOTAL += damage_data.Damage*10
-     local max=0 for VALUE,T in UI_COMBO_RANKS do
+     local max=-1 for VALUE,T in UI_COMBO_RANKS do
           if (VALUE>max and VALUE<=UI_COMBO_TOTAL) then
                UI_COMBO_RANK_THIS = T
                max = VALUE
@@ -507,10 +508,18 @@ function DAMAGE ( damage_data )
      local assetX do for _,x in that.Model:GetChildren() do if (x.Name=="HITSTOP_SHAKE" and x:GetAttribute("HITSTOP")) then assetX=x end end end
      if(not assetX) then
      assetX = ASSET("HITSTOP_SHAKE")
-     assetX.Enabled=true
      assetX:SetAttribute("HITSTOP",damage_data.HitStop)
+     assetX.Enabled=true
      assetX.Parent=that.Model
      else assetX:SetAttribute("HITSTOP",damage_data.HitStop) end
+     
+     local assetX do for _,x in that.Model:GetChildren() do if (x.Name=="KNOCKDOWN" and x:GetAttribute("VELOCITY")) then x:SetAttribute("CANCEL",true) end end end
+     if (damage_data.Knockdown) then
+     assetX = ASSET("KNOCKDOWN")
+     assetX:SetAttribute("VELOCITY",damage_data.KnockdownVelocity or GET_LOOK()*2+V3(0,8,0))
+     assetX.Enabled=true
+     assetX.Parent=that.Model
+     end
 
      SIMPLE { Save='Hit', Coord0=that.Root.CFrame, Transparency0=1, Anchored=true, Time=0.1}
      SIMPLE { Holder='Hit', Type='PointLight', Range0=5, Range1=2, Brightness0=15, Brightness1=0, Time=0.1 }
@@ -562,7 +571,7 @@ end
 --- attack_data BASE ---
 --[[--
 
-ATTACK { Frames=1, Whiff=0, Hitboxes={ [0]={[0]={Damage=1.0,DamageType='',HitStop=0,HitStopSelf=0,HitStun=0, Inflict={'DEBUFF_NAME'}, Knockback=GET_LOOK()*2,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT0,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[ROOT],Size=V3(0,0,0),Off=COORD(0,0,0),Frames=60,HitOwner=false,Color=HB_COLOR_NORMAL, Special={}}} }, FrameSpecial={} }
+ATTACK { Frames=1, Whiff=0, Hitboxes={ [0]={[0]={Damage=1.0,DamageType='',HitStop=0,HitStopSelf=0,HitStun=0, Inflict={'DEBUFF_NAME'}, Knockback=GET_LOOK()*2,KnockbackMax=nil,KnockbackTime=0.1, Knockdown=false,KnockdownVelocity=nil Sound={data=SND_CUT0,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[ROOT],Size=V3(0,0,0),Off=COORD(0,0,0),Frames=60,HitOwner=false,Color=HB_COLOR_NORMAL, Special={}}} }, FrameSpecial={} }
 
 --]]--
 CANCEL = false
@@ -579,7 +588,7 @@ function ATTACK ( attack_data )
                function(ID,PART,hit,that,thatHumanoid,thatRoot,thatTICK)
                     ATTACKWHIFF = false ; ATTACKLANDED = true
                     LOCKED = LOCKED or thatRoot ; LOCKED_TIMER = 300
-                    DAMAGE { Damage=HB_DATA.Damage,DamageType=HB_DATA.DamageType,HitStop=HB_DATA.HitStop,HitStopSelf=HB_DATA.HitStopSelf,HitStun=HB_DATA.HitStun,that={Model=that,Humanoid=thatHumanoid,Root=thatRoot} }
+                    DAMAGE { Damage=HB_DATA.Damage,DamageType=HB_DATA.DamageType,HitStop=HB_DATA.HitStop,HitStopSelf=HB_DATA.HitStopSelf,HitStun=HB_DATA.HitStun,Knockdown=HB_DATA.Knockdown,KnockdownVelocity=HB_DATA.KnockdownVelocity,that={Model=that,Humanoid=thatHumanoid,Root=thatRoot} }
                     KNOCKBACK { that, Velocity=HB_DATA.Knockback, MaxForce=HB_DATA.MaxForce, Time=HB_DATA.KnockbackTime }
                     if HB_DATA.Recoil then
                          KNOCKBACK { Model, Velocity=HB_DATA.Recoil, MaxForce=HB_DATA.MaxForce, Time=HB_DATA.KnockbackTime }
@@ -690,18 +699,21 @@ UI_COMBO_HITS = UI_COMBO_TIMER>0 and UI_COMBO_HITS or 0
 UI_COMBO_TOTAL = UI_COMBO_TIMER>0 and UI_COMBO_TOTAL or 0
 UI_COMBO_TIMER = UI_COMBO_TIMER>0 and ((HIT_STOP<=0 and not BLOCKING) and UI_COMBO_TIMER-1 or UI_COMBO_TIMER) or 0
 UI_COMBO_SCALAR = 0.9*UI_COMBO_SCALAR
-UI_COMBO_SPIN += UI_COMBO_SCALAR*168
+UI_COMBO_SPIN += 0.5+(UI_COMBO_SCALAR*168)
 UI_COMBOspinny0.Size = UDim2.new(0.5+(UI_COMBO_SCALAR*20),0,0.5+(UI_COMBO_SCALAR*20),0)
 UI_COMBOspinny0.Rotation = -UI_COMBO_SPIN*1.2
 UI_COMBOspinny1.Size = UDim2.new(0.5+(UI_COMBO_SCALAR*10),0,0.5+(UI_COMBO_SCALAR*10),0)
 UI_COMBOspinny1.Rotation = UI_COMBO_SPIN
 UI_COMBOhits.Text = UI_COMBOprefix..tostring(UI_COMBO_HITS)..UI_COMBOsuffix
+UI_COMBOhits.Font = Enum.Font.SourceSansBold
 UI_COMBOtotal.Text = UI_COMBOprefix..string.format("%.1f",UI_COMBO_TOTAL/10).." ("..string.format("%.1f",UI_COMBO_DAMAGE/10)..")"..UI_COMBOsuffix
+UI_COMBOtotal.Font = Enum.Font.SourceSansBold
 UI_COMBOrank.Text = UI_COMBOprefix..UI_COMBO_RANK_THIS.NAME..UI_COMBOsuffix
 UI_COMBOrank.TextColor3 = UI_COMBO_RANK_THIS.COLOR
+UI_COMBOrank.Font = Enum.Font.SourceSansBold
+UI_COMBOrank.Size=UDim2.new(0.6+((UI_COMBO_SCALAR*30)^0.5),0,0.6+((UI_COMBO_SCALAR*30)^0.5),0)
+UI_COMBOasset.Rotation = (UI_COMBO_SCALAR*283)*math.sin(TICK*(math.pi*2.3))
 UI_COMBOasset.Visible = UI_COMBO_TIMER>0
-
--- TODO: UI_COMBOrank animation --
 
 UIBar.Size=UDim2.new(Humanoid.Health/Humanoid.MaxHealth,0,1,0)
 UIBar.BackgroundColor3 = (Humanoid.Health>=Humanoid.MaxHealth/2) and COLOR(0.29,1,0.3) or (Humanoid.Health>=Humanoid.MaxHealth/4) and COLOR(1,1,0) or COLOR(1,0,0)
@@ -832,8 +844,8 @@ if (BUSY<=0) then
      KNOCKBACK { Model, Velocity=GET_LOOK()*70 }
      SWORD_TRAIL=true
      ATTACK { Frames=13, Whiff=7, Hitboxes={ [0]={
-          [0]={Damage=10.0,DamageType='',HitStop=20,HitStun=0, Inflict={}, Knockback=GET_LOOK()*-20,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT3,Pitch=0.9,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,7),Off=COORD(0,0,-3.5),Frames=6,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
-          [1]={Damage=10.0,DamageType='',HitStop=25,HitStun=0, Inflict={}, Knockback=GET_LOOK()*-25,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT3,Pitch=0.9,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,4),Off=COORD(0,0,-8),Frames=6,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[6]=function() SWORD_TRAIL=false IMMUNE=false end} }
+          [0]={Damage=10.0,DamageType='',HitStop=20,HitStun=0, Inflict={}, Knockback=GET_LOOK()*-20,KnockbackMax=nil,KnockbackTime=0.1, Knockdown=true,KnockdownVelocity=nil, Sound={data=SND_CUT3,Pitch=0.9,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,7),Off=COORD(0,0,-3.5),Frames=6,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
+          [1]={Damage=10.0,DamageType='',HitStop=25,HitStun=0, Inflict={}, Knockback=GET_LOOK()*-25,KnockbackMax=nil,KnockbackTime=0.1, Knockdown=true,KnockdownVelocity=nil, Sound={data=SND_CUT3,Pitch=0.9,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,4),Off=COORD(0,0,-8),Frames=6,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[6]=function() SWORD_TRAIL=false IMMUNE=false end} }
      BUSY-=1
      ANIM_BUSY=false
      return
@@ -893,8 +905,8 @@ if (BUSY<=0) then
      SWORD_TRAIL=true
      IMMUNE=true
      ATTACK { Frames=12, Whiff=8, Hitboxes={ [0]={
-          [0]={Damage=10.0,DamageType='',HitStop=5,HitStun=0, Inflict={}, Knockback=V3(0,-40,0),Recoil=V3(0,43,0),KnockbackMax=nil,KnockbackTime=0.2, Sound={data=SND_CUT3,Pitch=0.9,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,7),Off=COORD(0,-4.2,-3.5),Frames=11,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
-          [1]={Damage=20.0,DamageType='',HitStop=6,HitStun=0, Inflict={}, Knockback=V3(0,-40,0),Recoil=V3(0,43,0),KnockbackMax=nil,KnockbackTime=0.2, Sound={data=SND_BRUTAL,Pitch=0.9,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,8,4),Off=COORD(0,-4.2,-8),Frames=11,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[8]=function() SWORD_TRAIL=false IMMUNE=false end} }
+          [0]={Damage=10.0,DamageType='',HitStop=5,HitStun=0, Inflict={}, Knockback=V3(0,-40,0),Recoil=V3(0,43,0),KnockbackMax=nil,KnockbackTime=0.2, Knockdown=true,KnockdownVelocity=V3(0,-3,0), Sound={data=SND_CUT3,Pitch=0.9,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,7),Off=COORD(0,-4.2,-3.5),Frames=11,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
+          [1]={Damage=20.0,DamageType='',HitStop=6,HitStun=0, Inflict={}, Knockback=V3(0,-40,0),Recoil=V3(0,43,0),KnockbackMax=nil,KnockbackTime=0.2, Knockdown=true,KnockdownVelocity=V3(0,-3,0), Sound={data=SND_BRUTAL,Pitch=0.9,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,8,4),Off=COORD(0,-4.2,-8),Frames=11,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[8]=function() SWORD_TRAIL=false IMMUNE=false end} }
      BUSY-=1
      ANIM_BUSY=false
      end
@@ -1160,8 +1172,8 @@ if (not CLONE_ACTIVE) then
      BUSY-=1
      SET_SOUND(SND_LUNGE,thisCLONE[HAND_R],0.7)
      ATTACK { Frames=13, Whiff=0, Hitboxes={ [0]={
-          [0]={Damage=5.0,DamageType='',HitStop=5,HitStopSelf=-5,HitStun=0, Inflict={}, Knockback=GET_LOOK(thisCLONE)*20,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT3,Pitch=0.9,Volume=0.6}, Rehit=0, Host=thisCLONE[HAND_R],Size=V3(3,6,7),Off=COORD(0,0,-3.5),Frames=9,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
-          [1]={Damage=5.0,DamageType='',HitStop=5,HitStopSelf=-5,HitStun=0, Inflict={}, Knockback=GET_LOOK(thisCLONE)*25,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT3,Pitch=0.9,Volume=0.8}, Rehit=0, Host=thisCLONE[HAND_R],Size=V3(3,6,4),Off=COORD(0,0,-8),Frames=9,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={} }
+          [0]={Damage=5.0,DamageType='',HitStop=5,HitStopSelf=-5,HitStun=0, Inflict={}, Knockback=GET_LOOK(thisCLONE)*20,KnockbackMax=nil,KnockbackTime=0.1, Knockdown=true,KnockdownVelocity=nil, Sound={data=SND_CUT3,Pitch=0.9,Volume=0.6}, Rehit=0, Host=thisCLONE[HAND_R],Size=V3(3,6,7),Off=COORD(0,0,-3.5),Frames=9,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
+          [1]={Damage=5.0,DamageType='',HitStop=5,HitStopSelf=-5,HitStun=0, Inflict={}, Knockback=GET_LOOK(thisCLONE)*25,KnockbackMax=nil,KnockbackTime=0.1, Knockdown=true,KnockdownVelocity=nil, Sound={data=SND_CUT3,Pitch=0.9,Volume=0.8}, Rehit=0, Host=thisCLONE[HAND_R],Size=V3(3,6,4),Off=COORD(0,0,-8),Frames=9,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={} }
      CLONE_ACTIVE=nil
      return
      end
