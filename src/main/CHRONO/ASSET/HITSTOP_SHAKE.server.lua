@@ -13,7 +13,7 @@ IT.Size=Vector3.zero
 local Actual = Root or Model:FindFirstChild("Torso") or Model:FindFirstChild("UpperTorso") or Model:FindFirstChild("LowerTorso") or Model:FindFirstChild("Head") or Model:FindFirstChildOfClass("Part")
 do
 local q = Actual:FindFirstChildOfClass('Motor6D')
-if(q.Part1) then Actual=q.Part1 end
+Actual=q~=nil and q.Part1 or Actual
 end
 
 local Motor = Instance.new('Weld')

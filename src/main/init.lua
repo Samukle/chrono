@@ -17,7 +17,7 @@ local thisMT = {}
 thisMT.__index = thisMT
 
 do
-function thisMT:load(playerName : string)
+function thisMT:load( playerName : string )
 	local player = Player(playerName)
 	if(player) then
 		local ModelOld = player.Character
@@ -29,8 +29,14 @@ function thisMT:load(playerName : string)
 		Model.PrimaryPart.Anchored = false
 		player.Character = Model
 		Script.Parent = Model
-		end
 	end
+end
+
+local ASSET = script:WaitForChild("SERVER_ASSET")
+function thisMT:asset( assetName : string )
+	assert(ASSET:FindFirstChild( assetName ), "Nope! Couldn't find one of that name")
+	return ASSET:FindFirstChild( assetName ):Clone()
+end
 
 end
 

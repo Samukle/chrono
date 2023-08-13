@@ -31,7 +31,7 @@ return function ( data )
           this.Anchored = Anchored ; this.CastShadow = CastShadow
           this.CanCollide = false ; this.Massless = true
           this.Shape = (Type~='Mesh') and Type or 'Block'
-          this.Parent = workspace
+          this.Parent = data.Parent or workspace
 
           if (SAVED_SPACE) then proxy [SAVED_SPACE] = this end
 

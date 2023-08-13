@@ -81,6 +81,10 @@ SND_SQUARE = {ID='rbxassetid://7527961200',START=0,END=60000}
 SND_WOBBLY = {ID='rbxassetid://9085314270',START=0,END=60000}
 SND_TEAR = {ID='rbxassetid://2818141062',START=0,END=60000}
 SND_ERCHIUS_END = {ID='rbxassetid://2572705286',START=0,END=60000}
+SND_BLOOD_ANIME = {ID='rbxassetid://5633549800',START=0,END=60000}
+SND_SCORE = {ID='rbxassetid://5448502191',START=0,END=60000}
+SND_SCORE_BONUS = {ID='rbxassetid://7987858344',START=0,END=60000}
+SND_SCORE_MEGA = {ID='rbxassetid://4860021620',START=0,END=60000}
 
 SND_CUT0 = {ID='rbxassetid://7171761940',START=0.2,END=60000}
 SND_CUT1 = {ID='rbxassetid://5473058688',START=0,END=60000}
@@ -103,26 +107,70 @@ UI_COMBO_HITS = 0
 UI_COMBO_TIMER = 0
 UI_COMBO_TOTAL = 0
 UI_COMBO_DAMAGE = 0
+UI_COMBO_SCORE = 0
 UI_COMBOasset = UI:WaitForChild('Combo')
 UI_COMBOspinny0 = UI_COMBOasset:WaitForChild('Spinny0')
 UI_COMBOspinny1 = UI_COMBOasset:WaitForChild('Spinny1')
 UI_COMBOrank = UI_COMBOasset:WaitForChild('ComboRank')
 UI_COMBOhits = UI_COMBOasset:WaitForChild('Hits')
 UI_COMBOtotal = UI_COMBOasset:WaitForChild('TextLabel')
+UI_COMBOscore = UI_COMBOasset:WaitForChild('Score')
 UI_COMBOprefix = '<stroke thickness="5"><b>'
 UI_COMBOsuffix = '</b></stroke>'
 UI_COMBO_SCALAR = 0
 UI_COMBO_SPIN = 0
 UI_COMBO_RANKS = {
      [0]={NAME="D", COLOR=Color3.fromRGB(135,99,57)},
-     [400]={NAME="C", COLOR=Color3.fromRGB(208,201,121)},
-     [1000]={NAME="B", COLOR=Color3.fromRGB(140,229,182)},
-     [1700]={NAME="A", COLOR=Color3.fromRGB(229,59,68)},
-     [2000]={NAME="S", COLOR=Color3.fromRGB(229,102,216)},
-     [6000]={NAME="SS", COLOR=Color3.fromRGB(255,233,110)},
-     [9000]={NAME="SSS", COLOR=Color3.fromRGB(255,9,9)},
+     [200]={NAME="C", COLOR=Color3.fromRGB(208,201,121)},
+     [400]={NAME="B", COLOR=Color3.fromRGB(140,229,182)},
+     [600]={NAME="A", COLOR=Color3.fromRGB(229,59,68)},
+     [800]={NAME="S", COLOR=Color3.fromRGB(229,102,216)},
+     [1000]={NAME="SS", COLOR=Color3.fromRGB(255,233,110)},
+     [1200]={NAME="SSS", COLOR=Color3.fromRGB(255,9,9)},
+     [1400]={NAME="SSS+", COLOR=Color3.fromRGB(255,255,124)},
 }
 UI_COMBO_RANK_THIS = UI_COMBO_RANKS [0]
+
+UI_TRICKSasset = UI:WaitForChild('TrickList')
+UI_TRICKbase = UI:WaitForChild('TrickBase')
+UI_TRICK = 0
+
+function TRICK ( data )
+     UI_COMBO_TIMER = (2+math.ceil(UI_COMBO_TIMER/300))*60
+     local TRICK = UI_TRICKbase:Clone()
+     TRICK.LayoutOrder = UI_TRICK
+     TRICK.Text = UI_COMBOprefix.."+"..data.Name.." ("..tostring(data.Score)..")"..UI_COMBOsuffix
+     TRICK.Size = UDim2.new(0,0,TRICK.Size.Y.Scale,0)
+     TRICK.Visible = true
+     UI_TRICK+=1
+     UI_COMBO_SCORE+=data.Score
+     local max=-1 for VALUE,T in UI_COMBO_RANKS do
+          if (VALUE>max and VALUE<=UI_COMBO_SCORE) then
+               UI_COMBO_RANK_THIS = T
+               max = VALUE
+          end
+     end
+     TRICK.Parent = UI_TRICKSasset
+     if (data.Mega) then SET_SOUND ( SND_SCORE_MEGA, UIBar, 1.5, 1.0 ) end
+     if (data.Bonus) then SET_SOUND ( SND_SCORE_BONUS, UIBar, 1.0, 0.75 ) end
+     SET_SOUND ( SND_SCORE, UIBar, 2.0, 0.1 )
+     task.spawn(function()
+          local TICK=0
+          while TICK<=120 do
+               TICK+=1
+               TRICK.Size = UDim2.new(TRICK.Size.X.Scale+(1-TRICK.Size.X.Scale)*0.2,0,TRICK.Size.Y.Scale,0)
+               task.wait()
+          end
+          local TICK=0
+          while TICK<=6 do
+               TICK+=1
+               TRICK.TextTransparency = (TICK/6)
+               task.wait()
+          end
+          TRICK:Destroy()
+          return
+     end)
+end
 
 ----------------------------------------------------------------------------------------------------
 
@@ -222,11 +270,11 @@ function GET_HUMANOID ( subject : Model )
 
 function GET_ROOT ( subject : Model )
      local humanoid = GET_HUMANOID (subject)
-     local root = (humanoid~=nil) and (humanoid.RootPart or subject.PrimaryPart
+     local root = (humanoid~=nil) and (humanoid.RootPart) or (subject:IsA("Model") and subject.PrimaryPart)
           or subject:FindFirstChild'HumanoidRootPart' or subject:FindFirstChild'RootPart'
           or subject:FindFirstChild'Torso' or subject:FindFirstChild'LowerTorso' or subject:FindFirstChild'UpperTorso'
           or subject:FindFirstChild'Head'
-          or subject:FindFirstChildOfClass'BasePart') or nil
+          or subject:FindFirstChildOfClass'BasePart' or nil
      return root
      end
 
@@ -429,21 +477,21 @@ end
 -- CLOCK FORMAT --
 -- CLOCK { Radius=70, Color=COLOR(1,1,1), Coord0=COORD(0,0,0), Coord1=COORD(0,0,0), Minute=15.0, Hour=6.0, Duration=2.0 }
 function CLOCK ( data )
-     SIMPLE { Save='StopClock0', Type='Block', Size0=V3(data.Radius,0,data.Radius), Transparency0=1.0, Color0=data.Color, Coord0=data.Coord0 or Model_Body[ROOT].CFrame, Coord1=data.Coord1 or data.Coord0 or Model_Body[ROOT].CFrame, Anchored=true, CastShadow=false, Time=data.Duration }
-     SIMPLE { Holder='StopClock0', Type='Decal', Face='Top', Texture='rbxassetid://4975348081', Color0=COLOR(data.Color.R*2,data.Color.G*2,data.Color.B*2), Transparency0=0.0, Transparency1=1.0, Time=data.Duration}
-     SIMPLE { Holder='StopClock0', Type='Decal', Face='Bottom', Texture='rbxassetid://4975348081', Color0=COLOR(data.Color.R*2,data.Color.G*2,data.Color.B*2), Transparency0=0.0, Transparency1=1.0, Time=data.Duration}
+     SIMPLE { Save='StopClock0', Type='Block', Size0=V3(data.Radius,0,data.Radius), Transparency0=1.0, Color0=data.Color, Coord0=data.Coord0 or Model_Body[ROOT].CFrame, Coord1=data.Coord1 or data.Coord0 or Model_Body[ROOT].CFrame, Anchored=true, CastShadow=false, Time=data.Duration, Parent=data.Parent or workspace }
+     SIMPLE { Holder='StopClock0', Type='Decal', Face='Top', Texture='rbxassetid://4975348081', Color0=COLOR(data.Color.R*5,data.Color.G*5,data.Color.B*5), Transparency0=0.0, Transparency1=1.0, Time=data.Duration}
+     SIMPLE { Holder='StopClock0', Type='Decal', Face='Bottom', Texture='rbxassetid://4975348081', Color0=COLOR(data.Color.R*5,data.Color.G*5,data.Color.B*5), Transparency0=0.0, Transparency1=1.0, Time=data.Duration}
 
-     SIMPLE { Save='StopClock1', Type='Block', Size0=V3(data.Radius*0.9,0,data.Radius*0.9), Transparency0=1.0, Color0=data.Color, Coord0=data.Coord0 or Model_Body[ROOT].CFrame, Coord1=data.Coord1 or data.Coord0 or Model_Body[ROOT].CFrame, CoordAdd=ANGLE(0,math.rad(data.Hour),0), Anchored=true, CastShadow=false, Time=2.0 }
-     SIMPLE { Holder='StopClock1', Type='Decal', Face='Top', Texture='rbxassetid://4970076788', Color0=COLOR(data.Color.R*2,data.Color.G*2,data.Color.B*2), Transparency0=0.0, Transparency1=1.0, Time=data.Duration}
-     SIMPLE { Holder='StopClock1', Type='Decal', Face='Bottom', Texture='rbxassetid://4970076788', Color0=COLOR(data.Color.R*2,data.Color.G*2,data.Color.B*2), Transparency0=0.0, Transparency1=1.0, Time=data.Duration}
+     SIMPLE { Save='StopClock1', Type='Block', Size0=V3(data.Radius*0.9,0,data.Radius*0.9), Transparency0=1.0, Color0=data.Color, Coord0=data.Coord0 or Model_Body[ROOT].CFrame, Coord1=data.Coord1 or data.Coord0 or Model_Body[ROOT].CFrame, CoordAdd=ANGLE(0,math.rad(data.Hour),0), Anchored=true, CastShadow=false, Time=2.0, Parent=data.Parent or workspace }
+     SIMPLE { Holder='StopClock1', Type='Decal', Face='Top', Texture='rbxassetid://4970076788', Color0=COLOR(data.Color.R*5,data.Color.G*5,data.Color.B*5), Transparency0=0.0, Transparency1=1.0, Time=data.Duration}
+     SIMPLE { Holder='StopClock1', Type='Decal', Face='Bottom', Texture='rbxassetid://4970076788', Color0=COLOR(data.Color.R*5,data.Color.G*5,data.Color.B*5), Transparency0=0.0, Transparency1=1.0, Time=data.Duration}
 
-     SIMPLE { Save='StopClock2', Type='Block', Size0=V3(data.Radius,0,data.Radius), Transparency0=1.0, Color0=data.Color, Coord0=data.Coord0 or Model_Body[ROOT].CFrame, Coord1=data.Coord1 or data.Coord0 or Model_Body[ROOT].CFrame, CoordAdd=ANGLE(0,math.rad(data.Minute),0), Anchored=true, CastShadow=false, Time=2.0 }
-     SIMPLE { Holder='StopClock2', Type='Decal', Face='Top', Texture='rbxassetid://4970076788', Color0=COLOR(data.Color.R*2,data.Color.G*2,data.Color.B*2), Transparency0=0.0, Transparency1=1.0, Time=data.Duration}
-     SIMPLE { Holder='StopClock2', Type='Decal', Face='Bottom', Texture='rbxassetid://4970076788', Color0=COLOR(data.Color.R*2,data.Color.G*2,data.Color.B*2), Transparency0=0.0, Transparency1=1.0, Time=data.Duration}
+     SIMPLE { Save='StopClock2', Type='Block', Size0=V3(data.Radius,0,data.Radius), Transparency0=1.0, Color0=data.Color, Coord0=data.Coord0 or Model_Body[ROOT].CFrame, Coord1=data.Coord1 or data.Coord0 or Model_Body[ROOT].CFrame, CoordAdd=ANGLE(0,math.rad(data.Minute),0), Anchored=true, CastShadow=false, Time=2.0, Parent=data.Parent or workspace }
+     SIMPLE { Holder='StopClock2', Type='Decal', Face='Top', Texture='rbxassetid://4970076788', Color0=COLOR(data.Color.R*5,data.Color.G*5,data.Color.B*5), Transparency0=0.0, Transparency1=1.0, Time=data.Duration}
+     SIMPLE { Holder='StopClock2', Type='Decal', Face='Bottom', Texture='rbxassetid://4970076788', Color0=COLOR(data.Color.R*5,data.Color.G*5,data.Color.B*5), Transparency0=0.0, Transparency1=1.0, Time=data.Duration}
      
-     SIMPLE { Save='StopClock0', Type='Block', Size0=V3(data.Radius,0,data.Radius), Size1=V3(data.Radius*2,0,data.Radius*2), Transparency0=1.0, Color0=data.Color, Coord0=data.Coord0 or Model_Body[ROOT].CFrame, Coord1=data.Coord1 or data.Coord0 or Model_Body[ROOT].CFrame, Anchored=true, CastShadow=false, Time=0.2 }
-     SIMPLE { Holder='StopClock0', Type='Decal', Face='Top', Texture='rbxassetid://4975348081', Color0=COLOR(data.Color.R*2,data.Color.G*2,data.Color.B*2), Transparency0=0.0, Transparency1=1.0, Time=0.2}
-     SIMPLE { Holder='StopClock0', Type='Decal', Face='Bottom', Texture='rbxassetid://4975348081', Color0=COLOR(data.Color.R*2,data.Color.G*2,data.Color.B*2), Transparency0=0.0, Transparency1=1.0, Time=0.2}
+     SIMPLE { Save='StopClock0', Type='Block', Size0=V3(data.Radius,0,data.Radius), Size1=V3(data.Radius*2,0,data.Radius*2), Transparency0=1.0, Color0=data.Color, Coord0=data.Coord0 or Model_Body[ROOT].CFrame, Coord1=data.Coord1 or data.Coord0 or Model_Body[ROOT].CFrame, Anchored=true, CastShadow=false, Time=0.2, Parent=data.Parent or workspace }
+     SIMPLE { Holder='StopClock0', Type='Decal', Face='Top', Texture='rbxassetid://4975348081', Color0=COLOR(data.Color.R*5,data.Color.G*5,data.Color.B*5), Transparency0=0.0, Transparency1=1.0, Time=0.2}
+     SIMPLE { Holder='StopClock0', Type='Decal', Face='Bottom', Texture='rbxassetid://4975348081', Color0=COLOR(data.Color.R*5,data.Color.G*5,data.Color.B*5), Transparency0=0.0, Transparency1=1.0, Time=0.2}
 end
 
 function CLONE ( data )
@@ -492,6 +540,7 @@ end
 
 function DAMAGE ( damage_data )
      local that = damage_data.that
+     if (that and that.Root and that.Humanoid and that.Model) then
      HL(that.Model,0,1,COLOR(1,1,1),COLOR(1,1,1),0.5)
      SET_SOUND(SND_MARKER,that.Root,1,1)
      UI_COMBO_TIMER = (2+math.ceil(UI_COMBO_TIMER/300))*60
@@ -499,8 +548,9 @@ function DAMAGE ( damage_data )
      UI_COMBO_SCALAR += math.min(damage_data.Damage/600,0.1)
      UI_COMBO_DAMAGE = damage_data.Damage*10
      UI_COMBO_TOTAL += damage_data.Damage*10
+     UI_COMBO_SCORE += math.ceil(damage_data.Damage/(UI_COMBO_TIMER))
      local max=-1 for VALUE,T in UI_COMBO_RANKS do
-          if (VALUE>max and VALUE<=UI_COMBO_TOTAL) then
+          if (VALUE>max and VALUE<=UI_COMBO_SCORE) then
                UI_COMBO_RANK_THIS = T
                max = VALUE
           end
@@ -514,7 +564,11 @@ function DAMAGE ( damage_data )
      else assetX:SetAttribute("HITSTOP",damage_data.HitStop) end
      
      local assetX do for _,x in that.Model:GetChildren() do if (x.Name=="KNOCKDOWN" and x:GetAttribute("VELOCITY")) then x:SetAttribute("CANCEL",true) end end end
-     if (damage_data.Knockdown) then
+     if (damage_data.Knockdown and not damage_data.IS_WARPED_DAMAGE) then
+     TRICK { Name="<font color=\"#00ffff\">KNOCKDOWN</font>", Score=15 }
+     if (damage_data.KnockdownVelocity and damage_data.KnockdownVelocity.Y<=10) then
+     TRICK { Name="<font color=\"#ffff00\">SPIKE</font>", Score=75 }
+     end
      assetX = ASSET("KNOCKDOWN")
      assetX:SetAttribute("VELOCITY",damage_data.KnockdownVelocity or GET_LOOK()*2+V3(0,8,0))
      assetX.Enabled=true
@@ -557,13 +611,22 @@ function DAMAGE ( damage_data )
 
      if (not damage_data.IS_WARPED_DAMAGE) then
      local warp=STATUS:Has('WARP',damage_data.that.Model)
+     if (damage_data.Finisher==true) then
+          if (that.Humanoid:GetState()==Enum.HumanoidStateType.Dead) then
+               TRICK { Name="<font color=\"#ff0000\">FINISHER</font>", Score=200, Mega=true }
+          end
+     end
      if (warp) then
      local pitch = (2.0+math.random(-1,2*math.min(1+warp:GetAttribute('Stack')/60,2.0))/10)*math.max(1-warp:GetAttribute('Stack')/60,0.6)
      SET_SOUND (SND_CLOCK_BELL,that.Root,pitch,0.6+math.min(warp:GetAttribute('Stack')/60,2.0))
      damage_data.IS_WARPED_DAMAGE=true
      damage_data.WARP_OG_DAMAGE=damage_data.WARP_OG_DAMAGE or damage_data.Damage
      damage_data.Damage*=warp:GetAttribute('Stack')
+     if (damage_data.Damage>=1300.0) then
+          TRICK { Name="<font color=\"#007f00\">HUGE DISTORTION</font>", Score=math.ceil((damage_data.Damage/warp:GetAttribute('Stack'))*10), Bonus=true }
+     end
      DAMAGE ( damage_data )
+     end
      end
      end
 end
@@ -571,7 +634,7 @@ end
 --- attack_data BASE ---
 --[[--
 
-ATTACK { Frames=1, Whiff=0, Hitboxes={ [0]={[0]={Damage=1.0,DamageType='',HitStop=0,HitStopSelf=0,HitStun=0, Inflict={'DEBUFF_NAME'}, Knockback=GET_LOOK()*2,KnockbackMax=nil,KnockbackTime=0.1, Knockdown=false,KnockdownVelocity=nil Sound={data=SND_CUT0,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[ROOT],Size=V3(0,0,0),Off=COORD(0,0,0),Frames=60,HitOwner=false,Color=HB_COLOR_NORMAL, Special={}}} }, FrameSpecial={} }
+ATTACK { Frames=1, Whiff=0, Hitboxes={ [0]={[0]={Damage=1.0,DamageType='',HitStop=0,HitStopSelf=0,HitStun=0, Inflict={'DEBUFF_NAME'}, Knockback=GET_LOOK()*2,KnockbackMax=nil,KnockbackTime=0.1, Knockdown=false,KnockdownVelocity=nil Sound={data=SND_CUT0,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[ROOT],Size=V3(0,0,0),Off=COORD(0,0,0),Frames=60,HitOwner=false,Color=HB_COLOR_NORMAL,Finisher=false, Special={}}} }, FrameSpecial={} }
 
 --]]--
 CANCEL = false
@@ -588,7 +651,7 @@ function ATTACK ( attack_data )
                function(ID,PART,hit,that,thatHumanoid,thatRoot,thatTICK)
                     ATTACKWHIFF = false ; ATTACKLANDED = true
                     LOCKED = LOCKED or thatRoot ; LOCKED_TIMER = 300
-                    DAMAGE { Damage=HB_DATA.Damage,DamageType=HB_DATA.DamageType,HitStop=HB_DATA.HitStop,HitStopSelf=HB_DATA.HitStopSelf,HitStun=HB_DATA.HitStun,Knockdown=HB_DATA.Knockdown,KnockdownVelocity=HB_DATA.KnockdownVelocity,that={Model=that,Humanoid=thatHumanoid,Root=thatRoot} }
+                    if (HB_DATA.Damage>0.0) then DAMAGE { Damage=HB_DATA.Damage,DamageType=HB_DATA.DamageType,HitStop=HB_DATA.HitStop,HitStopSelf=HB_DATA.HitStopSelf,HitStun=HB_DATA.HitStun,Knockdown=HB_DATA.Knockdown,KnockdownVelocity=HB_DATA.KnockdownVelocity,Finisher=HB_DATA.Finisher,that={Model=that,Humanoid=thatHumanoid,Root=thatRoot} } end
                     KNOCKBACK { that, Velocity=HB_DATA.Knockback, MaxForce=HB_DATA.MaxForce, Time=HB_DATA.KnockbackTime }
                     if HB_DATA.Recoil then
                          KNOCKBACK { Model, Velocity=HB_DATA.Recoil, MaxForce=HB_DATA.MaxForce, Time=HB_DATA.KnockbackTime }
@@ -667,6 +730,7 @@ Humanoid.HealthChanged:Connect(function(HEALTH_NEW)
                KNOCKBACK { Model,Velocity = GET_LOOK()*-2 }
                SET_SOUND (SND_BLOCK,Model_Body[ROOT],1.0,0.4)
                ANIM_QUERY(ANIM_GET'BLOCKED')
+               TRICK { Name="<font color=\"#ffff00\">BLOCKED</font>", Score=2 }
           end
      elseif (HEALTH_NEW<HEALTH_OLD) then
           HEALTH_UI_THING(string.format('<i>%.1f</i>',(HEALTH_NEW-HEALTH_OLD)/10),COLOR(1,0,0))
@@ -696,6 +760,7 @@ Model_Body[ROOT].Anchored = HIT_STOP>0
 
 UI_COMBO_DAMAGE = UI_COMBO_TIMER>0 and UI_COMBO_DAMAGE or 0
 UI_COMBO_HITS = UI_COMBO_TIMER>0 and UI_COMBO_HITS or 0
+UI_COMBO_SCORE = UI_COMBO_TIMER>0 and UI_COMBO_SCORE or 0
 UI_COMBO_TOTAL = UI_COMBO_TIMER>0 and UI_COMBO_TOTAL or 0
 UI_COMBO_TIMER = UI_COMBO_TIMER>0 and ((HIT_STOP<=0 and not BLOCKING) and UI_COMBO_TIMER-1 or UI_COMBO_TIMER) or 0
 UI_COMBO_SCALAR = 0.9*UI_COMBO_SCALAR
@@ -712,6 +777,9 @@ UI_COMBOrank.Text = UI_COMBOprefix..UI_COMBO_RANK_THIS.NAME..UI_COMBOsuffix
 UI_COMBOrank.TextColor3 = UI_COMBO_RANK_THIS.COLOR
 UI_COMBOrank.Font = Enum.Font.SourceSansBold
 UI_COMBOrank.Size=UDim2.new(0.6+((UI_COMBO_SCALAR*30)^0.5),0,0.6+((UI_COMBO_SCALAR*30)^0.5),0)
+UI_COMBOscore.Text = UI_COMBOprefix..tostring(UI_COMBO_SCORE)..UI_COMBOsuffix
+UI_COMBOscore.TextColor3 = UI_COMBO_RANK_THIS.COLOR
+UI_COMBOscore.Font = Enum.Font.SourceSansBold
 UI_COMBOasset.Rotation = (UI_COMBO_SCALAR*283)*math.sin(TICK*(math.pi*2.3))
 UI_COMBOasset.Visible = UI_COMBO_TIMER>0
 
@@ -822,10 +890,11 @@ if (BUSY<=0) then
      FX_TIMESKIP()
      local TARGET, TARGETNT = LOCKED
      if (TARGET) then
+          TRICK { Name="<font color=\"#00ffff\">REPOSITION</font>", Score=25 }
           local X,Y,Z = TARGET.CFrame:ToEulerAnglesYXZ()
           local Q = RAY( (TARGET.CFrame*COORD(0,0,0.5)).p, TARGET.CFrame.LookVector*-8)
-          if (Q) then TARGET = COORD(Q.Position)*ANGLE(X,Y,Z)
-          else TARGET = TARGET.CFrame*COORD(0,0,8)
+          if (Q) then TARGET = COORD(Q.Position)*ANGLE(0,Y,Z)
+          else TARGET = COORD(TARGET.CFrame.p)*ANGLE(0,Y,Z)*COORD(0,0,8)
           end
      else
           local X,Y,Z = Model:GetPivot():ToEulerAnglesYXZ()
@@ -1112,8 +1181,14 @@ if (BUSY<=0) then
      SET_SOUND(SND_LUNGE,Sword.PrimaryPart,0.5)
      KNOCKBACK { Model, Velocity=GET_LOOK()*54, Time=0.6 }
      ATTACK { Frames=45, Whiff=10, Hitboxes={ [0]={
-          [0]={Damage=9.0,DamageType='',HitStop=20,HitStun=0, Inflict={}, Knockback=GET_LOOK()*55,KnockbackMax=nil,KnockbackTime=0.6, Sound={data=SND_CUT3,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(6,6,7),Off=COORD(0,0,-3.5),Frames=25,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
-          [1]={Damage=10.0,DamageType='',HitStop=20,HitStun=0, Inflict={}, Knockback=GET_LOOK()*56,KnockbackMax=nil,KnockbackTime=0.6, Sound={data=SND_CUT3,Pitch=1.0,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(1,1,4),Off=COORD(0,0,-8),Frames=25,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={} }
+          [0]={Damage=9.0,DamageType='',HitStop=20,HitStun=0, Inflict={}, Knockback=GET_LOOK()*55,KnockbackMax=nil,KnockbackTime=0.6, Sound={data=SND_CUT3,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(6,6,7),Off=COORD(0,0,-3.5),Frames=25,HitOwner=false,Color=HB_COLOR_SOUR, Special={}}},
+          [1]={
+          [0]={Damage=10.0,DamageType='',HitStop=20,HitStun=0, Inflict={}, Knockback=GET_LOOK()*56,KnockbackMax=nil,KnockbackTime=0.6, Sound={data=SND_CUT3,Pitch=1.0,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(1,1,4),Off=COORD(0,0,-8),Frames=25,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={} }
+     if (HITBOXES[1] and HITBOXES[1]['$result']) then
+     for _,x in HITBOXES[1]['$result'] do
+          TRICK { Name="<font color=\"#ff0000\">CRITICAL FINISHER</font>", Score=50 }
+     end
+     end
      BUSY-=1
      ANIM_BUSY=false
 
@@ -1126,6 +1201,7 @@ end
 CLONE_ACTIVE=nil
 function INPUT_ABILITY()
 if (__SPECIAL_SWORD_THROWING==true) then
+     TRICK { Name="<font color=\"#00ffff\">REPOSITION</font>", Score=25 }
      FX_TIMESKIP()
      if __SPECIAL_SWORD_THROWING_SOUND ~= nil then __SPECIAL_SWORD_THROWING_SOUND:Destroy() end
      Animator:STOP()
@@ -1150,8 +1226,13 @@ if (__SPECIAL_SWORD_THROWING==true) then
      KNOCKBACK { Model, Velocity=GET_LOOK()*70 }
      SWORD_TRAIL=true
      ATTACK { Frames=13, Whiff=7, Hitboxes={ [0]={
-          [0]={Damage=10.0,DamageType='',HitStop=5,HitStun=0, Inflict={'STOPshort'}, Knockback=GET_LOOK()*-20,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT3,Pitch=0.9,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,7),Off=COORD(0,0,-3.5),Frames=6,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
-          [1]={Damage=10.0,DamageType='',HitStop=5,HitStun=0, Inflict={'STOPshort'}, Knockback=GET_LOOK()*-25,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT3,Pitch=0.9,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,4),Off=COORD(0,0,-8),Frames=6,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[6]=function() SWORD_TRAIL=false IMMUNE=false end} }
+          [0]={Damage=10.0,DamageType='',HitStop=5,HitStun=0, Inflict={'STOPshort'}, Knockback=GET_LOOK()*-20,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT3,Pitch=0.9,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,7),Off=COORD(0,0,-3.5),Frames=6,HitOwner=false,Color=HB_COLOR_SOUR,Finisher=true, Special={}},
+          [1]={Damage=10.0,DamageType='',HitStop=5,HitStun=0, Inflict={'STOPshort'}, Knockback=GET_LOOK()*-25,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT3,Pitch=0.9,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,4),Off=COORD(0,0,-8),Frames=6,HitOwner=false,Color=HB_COLOR_SWEET,Finisher=true, Special={}}} }, FrameSpecial={[6]=function() SWORD_TRAIL=false IMMUNE=false end} }
+     if (HITBOXES[0] and HITBOXES[0]['$result']) then
+     for _,x in HITBOXES[0]['$result'] do
+          TRICK { Name="<font color=\"#ffff00\">TACTICAL</font>", Score=50 }
+     end
+     end
      BUSY-=1
      ANIM_BUSY=false
      return
@@ -1160,9 +1241,12 @@ if (__SPECIAL_SWORD_THROWING==true) then
 if (not CLONE_ACTIVE) then
      -- ABILITY_A10 --
      if (INPUTBEFORE=='↑') then
+     if (BUSY>0) then
+     TRICK { Name="<font color=\"#00ff00\">CLONE ASSIST</font>", Score=50 }
+     end
      BUSY+=1
      SET_LOOK_AT_NEAREST()
-     local thisCLONE, thisCLONE_ANIM = CLONE { Time=40/60, Animation=ANIM_GET('ATTACK_A11') }
+     local thisCLONE, thisCLONE_ANIM = CLONE { Time=1, Animation=ANIM_GET('ATTACK_A11') }
      local valx = 4.2
      local ticker = valx
      SET_SOUND(SND_MAGIC3,Model_Body[ROOT],3.2,0.5)
@@ -1179,7 +1263,10 @@ if (not CLONE_ACTIVE) then
      end
      
      -- ABILITY_A12 --
-     if (INPUTBEFORE=='↓↑' and BUSY<=0) then
+     if (INPUTBEFORE=='↓↑') then
+     if (BUSY>0) then
+     TRICK { Name="<font color=\"#00ff00\">CLONE ASSIST</font>", Score=50 }
+     end
      BUSY+=1
      SET_LOOK_AT_NEAREST()
      ANIM_QUERY(ANIM_GET('ABILITY_A12'))
@@ -1191,12 +1278,25 @@ if (not CLONE_ACTIVE) then
      SET_SOUND(SND_EPITAPH,Model_Body[ROOT],0.9,0.6)
      SET_SOUND(SND_CLOCK_BELL,Model_Body[ROOT],2,0.7)
 
-     local thisCLONE, thisCLONE_ANIM = CLONE { Time=9/60, Animation=ANIM_GET('CLONE_DASH') }
+     local thisCLONE, thisCLONE_ANIM = CLONE { Time=10/60, Animation=ANIM_GET('CLONE_DASH') }
+     local Effect = Instance.new("Part")
+     Effect.Size = Vector3.new(2,2,1)
+     Effect.CFrame = Model_Body[ROOT].CFrame
+     Effect.Transparency = 1
+     Effect.Anchored = true
+     Effect.CanCollide = false ; Effect.CanQuery = false ; Effect.CanTouch = false
+     Effect.Parent = workspace
+     local EMITTER = ASSET ( 'GlitchEmitter' )
+     EMITTER.Enabled = true
+     EMITTER:Emit(30)
+     EMITTER.Parent = Effect
      local function CA () AFTERIMAGE( thisCLONE ) end
-     Service'TweenService':Create(thisCLONE.PrimaryPart,TweenInfo.new(8/60,Enum.EasingStyle.Linear,Enum.EasingDirection.In,0,false,0),{CFrame=thisCLONE:GetPivot()*COORD(0,0,-20)}):Play()
-     
+     Service'TweenService':Create(thisCLONE.PrimaryPart,TweenInfo.new(10/60,Enum.EasingStyle.Quad,Enum.EasingDirection.Out,0,false,0),{CFrame=thisCLONE:GetPivot()*COORD(0,0,-20)}):Play()
+     Service'TweenService':Create(Effect,TweenInfo.new(10/60,Enum.EasingStyle.Quad,Enum.EasingDirection.Out,0,false,0),{CFrame=thisCLONE:GetPivot()*COORD(0,0,-20)}):Play()
+     SET_DEBRIS (Effect, 1)
+
      ATTACK { Frames=11, Whiff=0, Hitboxes={ [0]={
-          [0]={Damage=6.5,DamageType='',HitStop=5,HitStopSelf=-5,HitStun=0, Inflict={'WARP'}, Knockback=GET_LOOK(thisCLONE)*45,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_GLITCH,Pitch=1.0,Volume=0.8}, Rehit=0, Host=thisCLONE[ROOT],Size=V3(3,6,7),Off=COORD(0,0,-3.5),Frames=8,HitOwner=false,Color=HB_COLOR_NORMAL, Special={}} } }, FrameSpecial={[2]=CA,[4]=CA,[6]=CA,[8]=CA}}
+          [0]={Damage=6.5,DamageType='',HitStop=5,HitStopSelf=-5,HitStun=0, Inflict={'WARP'}, Knockback=GET_LOOK(thisCLONE)*45,KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_GLITCH,Pitch=1.0,Volume=0.8}, Rehit=0, Host=thisCLONE[ROOT],Size=V3(3,6,7),Off=COORD(0,0,-3.5),Frames=8,HitOwner=false,Color=HB_COLOR_NORMAL, Special={}} } }, FrameSpecial={[2]=CA,[4]=CA,[6]=CA,[8]=CA,[9]=function() EMITTER.Enabled = false end}}
      BUSY-=1
      CLONE_ACTIVE=nil
      return
@@ -1210,6 +1310,7 @@ if (BUSY<=0) then
      AFTERIMAGE ( Model )
      CLOCK { Radius=12, Color=COLOR(1,1,1), Minute=15.0, Hour=3.0, Duration=1.0 }
      local RANGE = 25
+     if (INPUTBEFORE=='↓') then RANGE*=-1 end
      local RESULT = RAY ( Model:GetPivot().p, GET_LOOK()*RANGE )
      local X,Y,Z = Model:GetPivot():ToEulerAnglesYXZ()
      if (RESULT) then
@@ -1224,8 +1325,186 @@ end
 end
 
 local STOP_RADIUS = 70
+local MEGA_RADIUS = 124
+local MEGA_HITS = 10
 function INPUT_CRITICAL()
 if (BUSY<=0) then
+     if (INPUTBEFORE=='←↓→↑') then
+     BUSY+=1
+     ANIM_BUSY=true
+     SET_LOOK_AT_NEAREST()
+     SET_SOUND( SND_CLOCK_REWIND, Model_Body[ROOT], 1.5 )
+     KNOCKBACK { Model, Velocity=Vector3.zero, Time=2.5 }
+     local Holder = Instance.new("Part")
+     Holder.CFrame = Model:GetPivot()
+     Holder.Transparency = 1
+     Holder.Material = Enum.Material.ForceField
+     Holder.Size = V3(MEGA_RADIUS,MEGA_RADIUS,MEGA_RADIUS)
+     Holder.Shape = "Ball"
+     Holder.Color = COLOR(1,1,1)
+     Holder.Anchored = true
+     Holder.CanCollide = false ; Holder.CanTouch = false ; Holder.CanQuery = false ; Holder.Massless=true ; Holder.CastShadow=false
+          local Weld = Instance.new('Weld')
+          Weld.Part0 = Holder
+          Weld.Part1 = Model_Body[ROOT]
+          Weld.Parent = Holder
+     Holder.Parent = workspace
+     FRAME { Frames=62, Pass=function(i) Holder.Transparency = 1 - ((i/62)^2) end }
+     Holder:Destroy()
+     SET_SOUND( SND_CLOCK_BELLER, Model_Body[ROOT], 0.7, 2.0 )
+     SET_SOUND( SND_TIME_STOP_2, Model_Body[ROOT], 0.8, 1.0 )
+     SET_SOUND( SND_TIME_STOP, Model_Body[ROOT], 0.8, 1.0 )
+     SIMPLE { Type='Ball', Material='Neon', Size0=V3(1,1,1)*MEGA_RADIUS, Size1=V3(0,0,0), Transparency0=0.9, Color0=COLOR(1,1,1), Coord0=Model_Body[ROOT].CFrame, Anchored=true, CastShadow=false, Time=0.5 }
+     SIMPLE { Type='Ball', Material='Neon', Size0=V3(1,1,1)*MEGA_RADIUS, Size1=V3(0,0,0), Transparency0=0.9, Color0=COLOR(1,1,1), Coord0=Model_Body[ROOT].CFrame, Anchored=true, CastShadow=false, Time=0.75 }
+     SIMPLE { Type='Ball', Material='Neon', Size0=V3(1,1,1)*MEGA_RADIUS, Size1=V3(0,0,0), Transparency0=0.9, Color0=COLOR(1,1,1), Coord0=Model_Body[ROOT].CFrame, Anchored=true, CastShadow=false, Time=1.0 }
+     SIMPLE { Type='Ball', Material='Neon', Size0=V3(1,1,1)*MEGA_RADIUS, Size1=V3(0,0,0), Transparency0=0.9, Color0=COLOR(1,1,1), Coord0=Model_Body[ROOT].CFrame, Anchored=true, CastShadow=false, Time=1.25 }
+     SIMPLE { Type='Ball', Material='Neon', Size0=V3(1,1,1)*MEGA_RADIUS, Size1=V3(0,0,0), Transparency0=0.9, Color0=COLOR(1,1,1), Coord0=Model_Body[ROOT].CFrame, Anchored=true, CastShadow=false, Time=1.5 }
+     SIMPLE { Save='StopBall', Type='Ball', Material='Neon', Size0=V3(1,1,1)*MEGA_RADIUS, Transparency0=0.0, Transparency1=1.0, Color0=COLOR(1,1,1), Coord0=Model_Body[ROOT].CFrame, Anchored=true, CastShadow=false, Time=1.0 }
+     SIMPLE { Holder='StopBall', Type='PointLight', Range0=60, Range1=5, Brightness0=1, Brightness1=0, Time=1.0 }
+
+     CLOCK { Radius=MEGA_RADIUS, Color=COLOR(1,1,1), Minute=15.0, Hour=6.0, Duration=2.0 }
+     ATTACK { Frames=62, Whiff=0, Hitboxes={ [0]={
+          [0]={Damage=0.0,DamageType='',HitStop=62,HitStopSelf=-62,HitStun=0, Inflict={}, Knockback=V3(0,0,0),KnockbackMax=nil,KnockbackTime=3, Knockdown=false,KnockdownVelocity=nil, Sound={}, Rehit=0, Host=Model_Body[ROOT],Size=V3(1,1,1)*(MEGA_RADIUS-(math.pi/2)),Off=ANGLE(0,math.rad(45),0),Frames=2,HitOwner=false,Color=HB_COLOR_DETECT, Special={}}} }, FrameSpecial={} }
+
+     local SAVED_COORD = {}
+     local UIS = {}
+     local PEOPLE = {}
+     local PARTICLES = {}
+
+     for x,_ in HITBOXES [0] ['$result'] do
+          PEOPLE [#PEOPLE+1] = x
+          SAVED_COORD [x] = x:GetPivot()
+
+          local Holder = Instance.new("Part")
+          Holder.CFrame = x:GetPivot()
+          Holder.Transparency = 1
+          Holder.Size = V3(7,7,7)
+          Holder.Anchored = true
+          Holder.CanCollide = false ; Holder.CanTouch = false ; Holder.CanQuery = false
+               local Weld = Instance.new('Weld')
+               Weld.Part0 = Holder
+               Weld.Part1 = x.PrimaryPart
+               Weld.Parent = Holder
+               local Particle = ASSET ( 'Shining' )
+               Particle.Parent = Holder
+          Holder.Parent = x
+          PARTICLES [x] = {INST=Particle,HOLDER=Holder}
+     end
+
+     if (#PEOPLE>0) then
+
+     IMMUNE=true
+
+     local thisPlayer = Service'Players':GetPlayerFromCharacter(Model)
+     if (thisPlayer) then
+          UIS [thisPlayer] = ASSET ( "DeathUI" )
+          UIS [thisPlayer].Parent = thisPlayer.PlayerGui
+          for _,y in PEOPLE do
+               local pArchiv = y.Archivable
+               y.Archivable = true
+               local q=y:Clone()
+               for _,x in q:GetDescendants() do if x:IsA("LuaSourceContainer") then x:Destroy() end end
+               q.Parent = UIS [thisPlayer].ViewportFrame
+               y.Archivable = false
+          end
+     end
+     
+     for _,x in PEOPLE do
+          local thatPlayer = Service'Players':GetPlayerFromCharacter(x)
+          if (thatPlayer) then
+               UIS [thatPlayer] = ASSET ( "DeathUI" )
+               UIS [thatPlayer].Parent = thatPlayer.PlayerGui
+               for _,y in PEOPLE do
+                    local pArchiv = y.Archivable
+                    y.Archivable = true
+                    local q=y:Clone()
+                    for _,x in q:GetDescendants() do if x:IsA("LuaSourceContainer") then x:Destroy() end end
+                    q.Parent = UIS [thatPlayer].ViewportFrame
+                    y.Archivable = false
+               end
+          end
+     end
+
+     KNOCKBACK { Model, Velocity=Vector3.zero, Time=3 }
+     local MEGA_HIT_ANGLES = {}
+     for i=1,MEGA_HITS do
+     local randomANGLE, randomPITCH = math.random(0,360),math.random(0,360)
+     local MEGA_HIT_ANGLE=COORD(math.cos(randomPITCH)*math.cos(randomANGLE)*math.random(-MEGA_RADIUS,MEGA_RADIUS),math.cos(randomPITCH)*math.sin(randomANGLE)*math.random(-MEGA_RADIUS,MEGA_RADIUS),math.sin(randomPITCH)*math.random(-MEGA_RADIUS,MEGA_RADIUS))*ANGLE(math.rad(math.random(0,360)),math.rad(math.random(0,360)),math.rad(math.random(0,360)))
+     MEGA_HIT_ANGLES [#MEGA_HIT_ANGLES+1]=MEGA_HIT_ANGLE
+     local MHx,MHy,MHz = MEGA_HIT_ANGLE:ToEulerAnglesYXZ()
+     SET_SOUND( SND_CLOCK_BELL, Model_Body[ROOT], 5.0, 2.0 )
+     SET_SOUND( SND_MAGIC2, Model_Body[ROOT], 1.5, 3.0 )
+     for _,y in UIS do
+          CLOCK { Radius=MEGA_RADIUS, Coord0=Model_Body[ROOT].CFrame*MEGA_HIT_ANGLE, Color=COLOR(1,1,1), Minute=15.0, Hour=7.5, Duration=1.0, Parent = y.Viewporting }
+     end
+     for _,x in PEOPLE do
+          if (x and PARTICLES [x] and PARTICLES [x].HOLDER) then
+               PARTICLES [x].INST:Emit(1)
+               x:PivotTo(SAVED_COORD [x])
+               DAMAGE { Damage=1.0, DamageType='', HitStop=3, HitStopSelf=-3, HitStun=0, that={Model=x,Humanoid=GET_HUMANOID(x),Root=GET_ROOT(x)}  }
+               SET_SOUND( SND_SQUARE, PARTICLES [x].HOLDER, 1.5, 0.3 )
+          end
+     end
+
+     FRAME { Frames=3 }
+     end
+
+     SET_SOUND( SND_CLOCK_BELL, Model_Body[ROOT], 4, 2.0 )
+     SET_SOUND( SND_MAGIC3, Model_Body[ROOT], 1.5, 2.6 )
+     for _,y in UIS do
+          for _,x in MEGA_HIT_ANGLES do
+               SIMPLE { Type='Block', Material='Neon', Size0=V3(2048,MEGA_RADIUS/2,0), Size1=V3(2048,0,0), Transparency0=0, Color0=COLOR(1,1,1), Coord0=Model_Body[ROOT].CFrame*x, Anchored=true, CastShadow=false, Time=1.1, Parent = y.Viewporting }
+          end
+     end
+     for _,x in PEOPLE do
+          if (x and PARTICLES [x] and PARTICLES [x].HOLDER) then
+               for _,y in UIS do
+                    y.Frame.BackgroundColor3=COLOR(0,0,0)
+                    y.ViewportFrame.ImageColor3=COLOR(50,50,50)
+                    CLOCK { Radius=43, Coord0=SAVED_COORD [x], Color=COLOR(1,1,1), Minute=1.0, Hour=0.5, Duration=10.0, Parent=y.Viewporting }
+               end
+               DAMAGE { Damage=20.0, DamageType='', HitStop=5, HitStopSelf=-5, HitStun=0, that={Model=x,Humanoid=GET_HUMANOID(x),Root=GET_ROOT(x)} }
+               x:PivotTo(SAVED_COORD [x])
+               CLOCK { Radius=43, Coord0=SAVED_COORD [x], Color=COLOR(1,1,1), Minute=1.0, Hour=0.5, Duration=2.0 }
+               SET_SOUND( SND_CUT1, PARTICLES [x].HOLDER, 0.8, 0.7 )
+               SET_SOUND( SND_BRUTAL, PARTICLES [x].HOLDER, 1.0, 0.7 )
+          end
+     end
+
+     FRAME { Frames=60 }
+     for _,x in PEOPLE do
+          if (x and PARTICLES [x] and PARTICLES [x].HOLDER) then
+               for _,y in UIS do
+                    local ANGLE=SAVED_COORD [x]*ANGLE(math.rad(math.random(0,360)),math.rad(math.random(0,360)),math.rad(math.random(0,360)))
+                    SIMPLE { Type='Block', Material='Neon', Size0=V3(4,1,0), Size1=V3(2048,3,0), Transparency0=0, Color0=COLOR(1,1,1), Coord0=ANGLE, Anchored=true, CastShadow=false, Time=2.0, Parent = y.Viewporting }
+                    Service'TweenService':Create(y.Frame,TweenInfo.new(0.1,Enum.EasingStyle.Linear,Enum.EasingDirection.In,0,false,0),{BackgroundTransparency=1}):Play()
+                    Service'TweenService':Create(y.Viewporting,TweenInfo.new(0.1,Enum.EasingStyle.Quad,Enum.EasingDirection.In,0,false,0),{ImageTransparency=1}):Play()
+                    Service'TweenService':Create(y.ViewportFrame,TweenInfo.new(1,Enum.EasingStyle.Linear,Enum.EasingDirection.In,0,false,0),{ImageTransparency=1}):Play()
+                    SET_DEBRIS(y,1)
+               end
+               DAMAGE { Damage=20.0, DamageType='', HitStop=25, HitStopSelf=-25, HitStun=0, Knockdown=true, KnockdownVelocity=V3(0,20,0),Finisher=true, that={Model=x,Humanoid=GET_HUMANOID(x),Root=GET_ROOT(x)} }
+               x:PivotTo(SAVED_COORD [x])
+               SET_SOUND( SND_CUT3, PARTICLES [x].HOLDER, 0.7, 0.7 )
+               SET_SOUND( SND_BLOOD_ANIME, PARTICLES [x].HOLDER, 1.0, 1.0 )
+               PARTICLES [x].HOLDER:Destroy()
+          end
+     end
+     IMMUNE=false
+     KNOCKBACK { Model, Velocity=Vector3.zero, Time=0.8 }
+     TRICK { Name="<font color=\"#ffff00\">CINEMATIC</font>", Score=100 }
+     FRAME { Frames=14 }
+     BUSY-=1
+     ANIM_BUSY=false
+
+     else
+     FRAME { Frames=32 }
+     BUSY-=1
+     ANIM_BUSY=false
+     end
+
+     return
+     end
+
      if (not COOLDOWNS ['CRITICAL']) then
      BUSY+=1
      ANIM_BUSY=true
@@ -1235,6 +1514,8 @@ if (BUSY<=0) then
      HL( Model, 0, 1, COLOR(1,1,1), COLOR(1,1,1), 0.2 )
      ANIM_QUERY( ANIM_GET('CRITICAL_A00') )
      FRAME { Frames=24, Pass=function(i) if (i%4==0) then AFTERIMAGE( Model ) end end }
+     SET_SOUND( SND_CLOCK_BELLER, Model_Body[ROOT], 1.0, 2.0 )
+     SET_SOUND( SND_TIME_STOP, Model_Body[ROOT], 1.0, 1.0 )
      SIMPLE { Type='Ball', Material='Neon', Size0=V3(1,1,1)*STOP_RADIUS, Size1=V3(0,0,0), Transparency0=0.9, Color0=COLOR(1,1,1), Coord0=Model_Body[ROOT].CFrame, Anchored=true, CastShadow=false, Time=0.5 }
      SIMPLE { Type='Ball', Material='Neon', Size0=V3(1,1,1)*STOP_RADIUS, Size1=V3(0,0,0), Transparency0=0.9, Color0=COLOR(1,1,1), Coord0=Model_Body[ROOT].CFrame, Anchored=true, CastShadow=false, Time=0.75 }
      SIMPLE { Type='Ball', Material='Neon', Size0=V3(1,1,1)*STOP_RADIUS, Size1=V3(0,0,0), Transparency0=0.9, Color0=COLOR(1,1,1), Coord0=Model_Body[ROOT].CFrame, Anchored=true, CastShadow=false, Time=1.0 }
@@ -1250,6 +1531,7 @@ if (BUSY<=0) then
                if (x:IsA('BasePart')) then
                     if ((not x.Anchored) and (x.Parent:IsA('Model')==false or x.Parent==workspace) and (x.Parent:IsA('BasePart')==false) and x.Parent:IsA('Accessory')==false and (x:GetPivot().p-Model_Body[ROOT].CFrame.p).Magnitude<=STOP_RADIUS/2) then
                          STATUS:Inflict( 'STOP', x )
+                         TRICK { Name="<font color=\"#00ffff\">OBJECT STOPPED</font>", Score=15 }
                     end
                elseif (x:IsA('Model')) then
                     if ((x.Parent:IsA('Model')==false or x.Parent==workspace) and (x.Parent:IsA('BasePart')==false) and x.Parent:IsA('Accessory')==false and (x:GetPivot().p-Model_Body[ROOT].CFrame.p).Magnitude<=STOP_RADIUS/2) then
@@ -1260,8 +1542,6 @@ if (BUSY<=0) then
      end
 
      FRAME { Frames=8 }
-     SET_SOUND( SND_CLOCK_BELLER, Model_Body[ROOT], 1.0, 2.0 )
-     SET_SOUND( SND_TIME_STOP, Model_Body[ROOT], 1.0, 1.0 )
      COOLDOWNS ['CRITICAL'] = 300
      BUSY-=1
      ANIM_BUSY=false
