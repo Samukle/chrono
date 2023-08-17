@@ -66,7 +66,7 @@ end
 
 local Velocity = script:GetAttribute('VELOCITY')
 local MASS = 90.0
-local GRAVITY = workspace.Gravity/145.2
+local GRAVITY = workspace.Gravity/242.2
 local FORCE = MASS/GRAVITY
 local DT = 0.7
 local ACCELERATIONy = 0
@@ -74,15 +74,15 @@ local BOUNCES = 2
 local HITFLOOR = false
 
 repeat
-     HITFLOOR = false
+     HITFLOOR = false    
      MASS = 2.7999999
-     GRAVITY = workspace.Gravity/145.2
+     GRAVITY = workspace.Gravity/242.2
      FORCE = MASS/GRAVITY
      ACCELERATIONy = FORCE/(MASS*DT)
      Velocity -= Vector3.new((Velocity.X*0.04),ACCELERATIONy,(Velocity.Z*0.04))
      --print(Velocity)
      IT.CFrame *= CFrame.new(Velocity*0.03)
-     local X = workspace:Raycast(IT.CFrame.p,(IT.CFrame:ToObjectSpace(IT.CFrame*CFrame.new(Velocity))).p/2,RP)
+     local X = workspace:Raycast(IT.CFrame.p,Velocity*(0.06/DT),RP)
      HITFLOOR = (X~=nil)
      if (HITFLOOR and BOUNCES>0) then 
      local SND = Instance.new('Sound')
@@ -92,7 +92,9 @@ repeat
      SND:Destroy()
      CROWN ( X.Position )
      IT.CFrame = CFrame.new(X.Position)
-     BOUNCES-=1 Velocity = Vector3.new(Velocity.X,ACCELERATIONy*12.2,Velocity.Z) end
+     local VALUE = Velocity.Y/-1.8
+     local LIMIT = MASS/5.2
+     BOUNCES-=1 Velocity = Vector3.new(Velocity.X,4.0+math.max(VALUE*1.2,LIMIT),Velocity.Z) end
      task.wait()
 until (HITFLOOR and BOUNCES<=0) or script:GetAttribute('CANCEL')==true
 

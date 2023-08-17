@@ -676,7 +676,13 @@ function ATTACK ( attack_data )
                end
           end
      
-     FRAME{Frames=attack_data.Frames,Pass=function(i) if(attack_data.FrameSpecial and attack_data.FrameSpecial[i]) then attack_data.FrameSpecial[i]() end if(CANCEL==true) then return '$stop' end end}
+     FRAME{Frames=attack_data.Frames,Pass=function(i) if(attack_data.FrameSpecial and attack_data.FrameSpecial[i]) then attack_data.FrameSpecial[i]() end if(CANCEL==true or (Humanoid.Jump and not ATTACKWHIFF)) then if (Humanoid.Jump) then TRICK { Name="<font color=\"#0000ff\">JUMP CANCEL</font>", Score=5 } for _,x in Model_Body[ROOT]:GetChildren() do if x:IsA('BodyVelocity') then x:Destroy() end end Humanoid:ChangeState(Enum.HumanoidStateType.Jumping) end
+     if (attack_data.FrameSpecial) then
+          for z,x in attack_data.FrameSpecial do
+          if (z>i) then x() end
+          end
+     end
+     return '$stop' end end}
      if(ATTACKWHIFF and attack_data.Whiff>0) then
           FRAME{Frames=attack_data.Whiff}
      end
@@ -756,7 +762,7 @@ HIT_STOP = HIT_STOP>0 and HIT_STOP-1 or 0
 ROTATION.MaxTorque = ROTATION_TIMER>0 and V3(0,math.huge,0) or V3(0,0,0)
 ROTATION_TIMER = ROTATION_TIMER>0 and (HIT_STOP<=0 and ROTATION_TIMER-1 or ROTATION_TIMER) or 0
 Animator.BUSY = HIT_STOP>0
-Model_Body[ROOT].Anchored = HIT_STOP>0
+Model_Body[ROOT].AssemblyLinearVelocity -= HIT_STOP>0 and Model_Body[ROOT].AssemblyLinearVelocity or V3(0,0,0)
 
 UI_COMBO_DAMAGE = UI_COMBO_TIMER>0 and UI_COMBO_DAMAGE or 0
 UI_COMBO_HITS = UI_COMBO_TIMER>0 and UI_COMBO_HITS or 0
@@ -1192,6 +1198,92 @@ if (BUSY<=0) then
      BUSY-=1
      ANIM_BUSY=false
 
+     end
+     --- ATTACK_B0 series ---
+     else
+     if (COMBO==0) then
+
+     SET_COMBO(1,60)
+     BUSY+=1
+     ANIM_BUSY=true
+     ANIM_QUERY(ANIM_GET('ATTACK_B00'))
+     SET_LOOK_AT_NEAREST()
+     FRAME{Frames=4}
+     SET_SOUND(SND_SLASH,Sword.PrimaryPart,1.1)
+     SWORD_TRAIL=true
+     ATTACK { Frames=12, Whiff=3, Hitboxes={ [0]={
+          [0]={Damage=3.0,DamageType='',HitStop=6,HitStun=0, Inflict={}, Knockback=GET_LOOK()*15+V3(0,32,0),Recoil=V3(0,12,0),KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT2,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(1,6,7),Off=COORD(0,0,-3.5),Frames=9,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
+          [1]={Damage=3.5,DamageType='',HitStop=12,HitStun=0, Inflict={}, Knockback=GET_LOOK()*20+V3(0,32,0),KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT2,Pitch=1.0,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,4),Off=COORD(0,0,-8),Frames=9,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[9]=function() SWORD_TRAIL=false end} }
+     BUSY-=1
+     ANIM_BUSY=false
+
+     elseif (COMBO==1) then
+
+     SET_COMBO(1,60)
+     BUSY+=1
+     ANIM_BUSY=true
+     ANIM_QUERY(ANIM_GET('ATTACK_B01'))
+     SET_LOOK_AT_NEAREST()
+     FRAME{Frames=5}
+     SET_SOUND(SND_SLASH,Sword.PrimaryPart,1.2)
+     KNOCKBACK { Model, Velocity=GET_LOOK()*13 }
+     SWORD_TRAIL=true
+     ATTACK { Frames=14, Whiff=2, Hitboxes={ [0]={
+          [0]={Damage=3.0,DamageType='',HitStop=6,HitStun=0, Inflict={}, Knockback=GET_LOOK()*15+V3(0,12,0),KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT2,Pitch=1.1,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(1,6,7),Off=COORD(0,0,-3.5),Frames=11,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
+          [1]={Damage=3.5,DamageType='',HitStop=12,HitStun=0, Inflict={}, Knockback=GET_LOOK()*20+V3(0,12,0),KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT2,Pitch=1.1,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,4),Off=COORD(0,0,-8),Frames=11,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[7]=function() SWORD_TRAIL=false end} }
+     BUSY-=1
+     ANIM_BUSY=false
+
+     elseif (COMBO==2) then
+
+     SET_COMBO(1,60)
+     BUSY+=1
+     ANIM_BUSY=true
+     ANIM_QUERY(ANIM_GET('ATTACK_B02'))
+     SET_LOOK_AT_NEAREST()
+     FRAME{Frames=4}
+     SET_SOUND(SND_SLASH,Sword.PrimaryPart,1.1)
+     KNOCKBACK { Model, Velocity=GET_LOOK()*13 }
+     SWORD_TRAIL=true
+     ATTACK { Frames=12, Whiff=3, Hitboxes={ [0]={
+          [0]={Damage=3.0,DamageType='',HitStop=6,HitStun=0, Inflict={}, Knockback=GET_LOOK()*15+V3(0,12,0),KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT2,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(1,6,7),Off=COORD(0,0,-3.5),Frames=8,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
+          [1]={Damage=3.5,DamageType='',HitStop=12,HitStun=0, Inflict={}, Knockback=GET_LOOK()*20+V3(0,12,0),KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT2,Pitch=1.0,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,4),Off=COORD(0,0,-8),Frames=8,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[12]=function() SWORD_TRAIL=false end} }
+     BUSY-=1
+     ANIM_BUSY=false
+
+     elseif (COMBO==3) then
+
+     SET_COMBO(1,60)
+     BUSY+=1
+     ANIM_BUSY=true
+     ANIM_QUERY(ANIM_GET('ATTACK_B03'))
+     SET_LOOK_AT_NEAREST()
+     FRAME{Frames=4}
+     SET_SOUND(SND_SLASH,Sword.PrimaryPart,1.1)
+     KNOCKBACK { Model, Velocity=GET_LOOK()*13 }
+     SWORD_TRAIL=true
+     ATTACK { Frames=12, Whiff=4, Hitboxes={ [0]={
+          [0]={Damage=3.0,DamageType='',HitStop=6,HitStun=0, Inflict={}, Knockback=GET_LOOK()*15+V3(0,12,0),KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT2,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(1,6,7),Off=COORD(0,0,-3.5),Frames=9,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
+          [1]={Damage=3.5,DamageType='',HitStop=12,HitStun=0, Inflict={}, Knockback=GET_LOOK()*20+V3(0,12,0),KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT2,Pitch=1.0,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,4),Off=COORD(0,0,-8),Frames=9,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[12]=function() SWORD_TRAIL=false end} }
+     BUSY-=1
+     ANIM_BUSY=false
+
+     elseif (COMBO==4) then
+
+     SET_COMBO(1,60)
+     BUSY+=1
+     ANIM_BUSY=true
+     ANIM_QUERY(ANIM_GET('ATTACK_A00'))
+     SET_LOOK_AT_NEAREST()
+     FRAME{Frames=12}
+     SET_SOUND(SND_SLASH,Sword.PrimaryPart,1.1)
+     KNOCKBACK { Model, Velocity=GET_LOOK()*13 }
+     SWORD_TRAIL=true
+     ATTACK { Frames=19, Whiff=3, Hitboxes={ [0]={
+          [0]={Damage=3.0,DamageType='',HitStop=6,HitStun=0, Inflict={}, Knockback=GET_LOOK()*15+V3(0,12,0),KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT2,Pitch=1.0,Volume=0.6}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(1,6,7),Off=COORD(0,0,-3.5),Frames=10,HitOwner=false,Color=HB_COLOR_SOUR, Special={}},
+          [1]={Damage=3.5,DamageType='',HitStop=12,HitStun=0, Inflict={}, Knockback=GET_LOOK()*20+V3(0,12,0),KnockbackMax=nil,KnockbackTime=0.1, Sound={data=SND_CUT2,Pitch=1.0,Volume=0.8}, Rehit=0, Host=Model_Body[HAND_R],Size=V3(3,6,4),Off=COORD(0,0,-8),Frames=10,HitOwner=false,Color=HB_COLOR_SWEET, Special={}}} }, FrameSpecial={[12]=function() SWORD_TRAIL=false end} }
+     BUSY-=1
+     ANIM_BUSY=false
      end
      end
 
